@@ -24,10 +24,10 @@
 
 
 $Hosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
-$vCenter = "vcenter-mgmt.vkernelblog.net"
+$vCenterFQDN = "vcenter-mgmt.vkernelblog.net"
 
 
-    Connect-VIServer $vCenter -User "administrator@vsphere.local" -Password "VMware123!"
+    Connect-VIServer $vCenterFQDN -User "administrator@vsphere.local" -Password "VMware123!"
     $VMs = Get-VM | Where-Object{($_.Name -notlike "vcenter-mgmt") -and ($_.PowerState -like "PoweredOn")}
     ##Gracefull shutdown off all VMs except vCenter.
     foreach($VM in $VMs){
@@ -41,6 +41,7 @@ $vCenter = "vcenter-mgmt.vkernelblog.net"
         $check = Get-VM -Name $VM
         if($check.PowerState -like "PoweredOn"){
             Write-Host "The following VM is still powered on:" $check.name 
+            start-Sleep -Seconds 5
         }
         else{
             Write-Host "The following VM is powered off:" $check.name 
@@ -49,19 +50,20 @@ $vCenter = "vcenter-mgmt.vkernelblog.net"
       while($check.PowerState -ne "PoweredOff") 
     }
     
-    $vCenter = "vcenter-mgmt"
-    Shutdown-VMGuest -VM $vCenter -Confirm:$false -ErrorAction SilentlyContinue
+    $vCenterVM = "vcenter-mgmt"
+    Shutdown-VMGuest -VM $vCenterVM -Confirm:$false -ErrorAction SilentlyContinue
     Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction SilentlyContinue
 
     foreach($h in $hosts){
         Connect-VIServer $h -User "root" -Password "VMware123!"
-        $check = Get-VM -Name $vCenter -ErrorAction SilentlyContinue
+        $check = Get-VM -Name $vCenterVM -ErrorAction SilentlyContinue
             if ($check){
                 Do
                 { 
-                    $check2 = Get-VM -Name $vCenter -ErrorAction SilentlyContinue
+                    $check2 = Get-VM -Name $vCenterVM -ErrorAction SilentlyContinue
                     if($check2.PowerState -like "PoweredOn"){
                     Write-Host "The following VM is still powered on:" $check2.name 
+                    start-Sleep -Seconds 5
                 }
                 else{
                         Write-Host "The following VM is powered off on host $h:" $check2.name 
@@ -69,7 +71,7 @@ $vCenter = "vcenter-mgmt.vkernelblog.net"
                 } 
                   while($check2.PowerState -ne "PoweredOff") 
             }else{
-                Write-Host "vCenter draait niet op host:" $h -ForegroundColor Red
+                Write-Host "vCenter doesn't run on host:" $h -ForegroundColor Red
             }
             
     }
