@@ -1,24 +1,49 @@
-﻿$Hosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
+﻿/*
+ * Created on Wed Sep 02 2020
+ *
+ * The MIT License (MIT)
+ * Copyright (c) 2020 DAngelo Karijopawiro
+ * Website: https://vkernelblog.com
+ * GitHub: https://github.com/vkernelblog
+ * File: Stop-VLCLab.ps1
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ * and associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial
+ * portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+ * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
+$Hosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
 $vCenter = "vcenter-mgmt.vkernelblog.net"
 
 
     Connect-VIServer $vCenter -User "administrator@vsphere.local" -Password "VMware123!"
     $VMs = Get-VM | Where-Object{($_.Name -notlike "vcenter-mgmt") -and ($_.PowerState -like "PoweredOn")}
-    ##Gracefull shutdown van alle vms behalve vcenter
+    ##Gracefull shutdown off all VMs except vCenter.
     foreach($VM in $VMs){
         Shutdown-VMGuest -VM $VM -Confirm:$false
     }
 
-    ##check of de vms uitstaan
+    ##Check if all VMs besides vCenter are powered off.
     foreach($VM in $VMs){
     Do
     { 
         $check = Get-VM -Name $VM
         if($check.PowerState -like "PoweredOn"){
-            Write-Host "De volgende VM staat nog aan:" $check.name 
+            Write-Host "The following VM is still powered on:" $check.name 
         }
         else{
-            Write-Host "De volgende VM staat uit:" $check.name 
+            Write-Host "The following VM is powered off:" $check.name 
         }
     } 
       while($check.PowerState -ne "PoweredOff") 
@@ -36,10 +61,10 @@ $vCenter = "vcenter-mgmt.vkernelblog.net"
                 { 
                     $check2 = Get-VM -Name $vCenter -ErrorAction SilentlyContinue
                     if($check2.PowerState -like "PoweredOn"){
-                    Write-Host "De volgende VM staat nog aan:" $check2.name 
+                    Write-Host "The following VM is still powered on:" $check2.name 
                 }
                 else{
-                        Write-Host "De volgende VM staat uit:" $check2.name 
+                        Write-Host "The following VM is powered off on host $h:" $check2.name 
                     }
                 } 
                   while($check2.PowerState -ne "PoweredOff") 
