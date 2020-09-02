@@ -38,12 +38,12 @@ foreach($h in $hosts){
 
 Start-Sleep -Seconds 10
 
-foreach($VM in $SDDC_Components){
+foreach($Component in $SDDC_Components){
     foreach($h in $hosts){
         Connect-VIServer $h -User "root" -Password "VMware123!"
-        if(Get-VM -Name $VM -ErrorAction SilentlyContinue){
-            Start-VM -VM $VM
-            Write-Host "$VM is started on $h." -ForegroundColor Green
+        if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
+            Start-VM -VM $Component
+            Write-Host "$Component is started on $h." -ForegroundColor Green
         }
         Disconnect-VIServer -Server * -Force -Confirm:$false
     }
