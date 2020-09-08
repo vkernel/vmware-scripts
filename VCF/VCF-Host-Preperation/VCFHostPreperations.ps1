@@ -78,7 +78,7 @@ $ESXICredentails = Get-Credential -Message "Enter the credentials for the ESXI r
 $DNSPrimary = "10.16.2.11"
 $DNSSecondary = "10.16.2.12" 
 $NTP = "172.17.20.230"
-$domainname = "vanleeuwen.com"
+$domainname = "vkernelblog.lan"
 
 foreach($a in $ServerArray){
     $hostname = $a.Name
