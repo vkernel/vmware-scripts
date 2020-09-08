@@ -1,4 +1,4 @@
-/*
+<#
  * Created on Tue Sep 08 2020
  *
  * The MIT License (MIT)
@@ -20,7 +20,9 @@
  * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+#>
+
+
 $ServerArray = @(
         [PSCustomObject]@{Name = "vlvm2001"; IP = "10.16.11.101"}
         [PSCustomObject]@{Name = "vlvm2003"; IP = "10.16.11.103"}
@@ -45,7 +47,7 @@ function write-log{
     
     $date = Get-Date -Format s 
 
-    $Loc = (get-location).path
+    $Loc = Split-Path $script:MyInvocation.MyCommand.Path
     if((Test-Path -Path $Loc\logs) -eq "False"){
         New-Item -ItemType Directory -Path "$Loc\Logs" | Out-Null
     }
