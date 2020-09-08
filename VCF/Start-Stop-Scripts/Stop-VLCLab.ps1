@@ -65,7 +65,7 @@ $vCenterFQDN = "vcenter-mgmt.vkernelblog.net"
                     start-Sleep -Seconds 5
                 }
                 else{
-                        Write-Host "The following VM is powered off on host $h:" $check2.name 
+                        Write-Host "The following VM is powered off on host: $h" $check2.name 
                     }
                 } 
                   while($check2.PowerState -ne "PoweredOff") 
