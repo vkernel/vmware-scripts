@@ -22,18 +22,136 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-$Hosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
-$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager"
+function write-log{
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Value,
+        [switch]$ErrorType,
+        [switch]$WarningType,
+        [switch]$Succeeded
+    )
+    
+    $date = Get-Date -Format s 
 
-foreach($h in $hosts){
-    Connect-VIServer $h -User "root" -Password "VMware123!"
-    if((Get-VMHost -Name $h -ErrorAction SilentlyContinue).ConnectionState -eq "Maintenance"){
-        Set-VMHost -VMHost $h -State Connected | Out-Null
-        Write-Host "Host $h is out of maintenance mode." -ForegroundColor Green
-    }else{
-        Write-Host "Host $h was already out of maintenace mode." -ForegroundColor Red
+    $Loc = (get-location).path
+    $LogFile = "$Loc\Start-VLCLab.log"
+
+    if($ErrorType){
+        Write-Host "$date - $Value" -ForegroundColor Red
+        Out-File -InputObject "$date - $Value" -FilePath $LogFile -Append 
     }
-    Disconnect-VIServer -Server * -Force -Confirm:$false
+    elseif($WarningType){
+        Write-Host "$date - $Value"  -ForegroundColor Yellow
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+    }
+    elseif($Succeeded){
+        Write-Host "$date - $Value"  -ForegroundColor Green
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append
+    }
+    else{
+        Write-Host "$date - $Value" 
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+    }
+    
+}
+
+##Settings
+$pHost = "esxi-1.vkernelblog.lan"
+$Credentials = Get-Credential
+##Components 
+$InfraComponents = "fw-1", "dc-1"
+$VCFNodes = "vcf-esxi-1", "vcf-esxi-2", "vcf-esxi-3", "vcf-esxi-4"
+##Nested Components
+$nHosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
+$SDDCComponents = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager"
+$nHost_username = "root"
+$nHost_password = "VMware123!"
+
+##Connecting to physical host
+try{
+    Connect-VIServer -Server $pHost -Credential $Credentials -ErrorAction Stop
+}catch{
+    $ErrorMessage = $_.Exception.Message
+    write-log -Value $ErrorMessage -ErrorType
+}
+
+##Starting InfraComponents
+foreach($i in $InfraComponents){
+    try{
+        write-log -Value "Starting VM: $i"
+        Start-VM -VM $i -ErrorAction Stop | Out-Null
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+    do{
+        try{
+            write-log -Value "Checking if VMtools are up and running on VM: $i"
+            $checkVMTools = (Wait-Tools -VM $i -ErrorAction Stop).PowerState
+        }catch{
+            $ErrorMessage = $_.Exception.Message
+            write-log -Value $ErrorMessage -ErrorType
+        }finally{
+            if([string]::IsNullOrWhiteSpace($ErrorMessage)){
+                write-log -Value "VM: $i is online!"
+            }
+            $ErrorMessage = $null
+        }   
+    }while ($checkVMTools -ne "PoweredOn")
+}
+
+##Starting VCFNodes.
+foreach($v in $VCFNodes){
+    try{
+        write-log -Value "Starting VM: $v"
+        Start-VM -VM $v -ErrorAction Stop | Out-Null
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+}
+
+##Checking if VMtool are up and running from the VCF nodes.
+foreach($v in $VCFNodes){
+    do{
+        try{
+            write-log -Value "Checking if VMtools are up and running on VM: $v"
+            $checkVMTools = (Wait-Tools -VM $v -ErrorAction Stop).PowerState
+        }catch{
+            $ErrorMessage = $_.Exception.Message
+            write-log -Value $ErrorMessage -ErrorType
+        }finally{
+            if([string]::IsNullOrWhiteSpace($ErrorMessage)){
+                write-log -Value "VM: $v is online!"
+            }
+            $ErrorMessage = $null
+        }   
+    }while ($checkVMTools -ne "PoweredOn")
+}
+
+
+##Remove nested hosts out of maintenance mode!!!!!!------
+foreach($n in $nHosts){
+    try{
+        Connect-VIServer -Server $pHost -Credential $Credentials -ErrorAction Stop
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+    try{
+        write-log -Value "Removing nested host: $n out of maintenance mode."
+        Set-VMHost -VMHost $n -State Connected -ErrorAction Stop
+        write-log -Value "Host $n is out of maintenance mode."
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+    try{
+        Disconnect-VIServer -Server * -Force -Confirm:$false
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
 }
 
 Start-Sleep -Seconds 10
