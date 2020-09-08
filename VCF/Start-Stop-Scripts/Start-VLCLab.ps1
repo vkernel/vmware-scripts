@@ -32,9 +32,13 @@ function write-log{
     )
     
     $date = Get-Date -Format s 
+    $fdate = Get-Date -Format dd-mm-yyyy-HH-mm
 
-    $Loc = (get-location).path
-    $LogFile = "$Loc\log\Start-VLCLab.log"
+    $ScriptDirectory = $PSScriptRoot
+    if((Test-Path -Path $ScriptDirectory\logs) -like "False"){
+        New-Item -ItemType Directory -Path "$ScriptDirectory\Logs" | Out-Null
+    }
+    $LogFile = "$ScriptDirectory\logs\$fdate-output.log"
 
     if($ErrorType){
         Write-Host "$date - $Value" -ForegroundColor Red
