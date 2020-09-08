@@ -46,12 +46,13 @@ function write-log{
     )
     
     $date = Get-Date -Format s 
+    $fdate = Get-Date -Format dd-mm-yyyy-HH-mm
 
-    $Loc = Split-Path $script:MyInvocation.MyCommand.Path
-    if((Test-Path -Path $Loc\logs) -eq "False"){
-        New-Item -ItemType Directory -Path "$Loc\Logs" | Out-Null
+    $ScriptDirectory = $PSScriptRoot
+    if((Test-Path -Path $ScriptDirectory\logs) -like "False"){
+        New-Item -ItemType Directory -Path "$ScriptDirectory\Logs" | Out-Null
     }
-    $LogFile = "$Loc\logs\VCFHostPreperations.log"
+    $LogFile = "$ScriptDirectory\logs\$fdate-output.log"
 
     if($ErrorType){
         Write-Host "$date - $Value" -ForegroundColor Red
@@ -73,7 +74,7 @@ function write-log{
 }
 
 ##Settings
-$ESXICredentails = Get-Credential
+$ESXICredentails = Get-Credential -Message "Enter the credentials for the ESXI root user." 
 $DNSPrimary = "10.16.2.11"
 $DNSSecondary = "10.16.2.12" 
 $NTP = "172.17.20.230"
@@ -85,7 +86,8 @@ foreach($a in $ServerArray){
 
     ##Connect to ESXI host.
     try{
-        Connect-VIServer -Server $a.IP -Credential $ESXICredentails -ErrorAction Stop
+        Connect-VIServer -Server $a.IP -Credential $ESXICredentails -ErrorAction Stop | Out-Null
+        write-log -Value "Connected to $fqdn"
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
@@ -127,6 +129,15 @@ foreach($a in $ServerArray){
         write-log -Value "Configured TSM-SSH policy: 'Start and stop with host' on ESXI host: $fqdn"
         $sshService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
         write-log -Value "Restarted VMHost service: 'TSM-SSH' on ESXI host: $fqdn"
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+
+    ##disconnecting from ESXI Host
+    try{
+        disconnect-VIServer -Server * -Confirm:$false -ErrorAction Stop | Out-Null
+        write-log -Value "Disconnected from $fqdn"
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
