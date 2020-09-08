@@ -22,20 +22,16 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 $ServerArray = @(
-    (
-        [PSCustomObject]@{Name = "vlvm2001"; IP = "10.16.11.101"},
-        [PSCustomObject]@{Name = "vlvm2003"; IP = "10.16.11.103"},
-        [PSCustomObject]@{Name = "vlvm2005"; IP = "10.16.11.105"},
-        [PSCustomObject]@{Name = "vlvm2007"; IP = "10.16.11.107"},
+        [PSCustomObject]@{Name = "vlvm2001"; IP = "10.16.11.101"}
+        [PSCustomObject]@{Name = "vlvm2003"; IP = "10.16.11.103"}
+        [PSCustomObject]@{Name = "vlvm2005"; IP = "10.16.11.105"}
+        [PSCustomObject]@{Name = "vlvm2007"; IP = "10.16.11.107"}
         [PSCustomObject]@{Name = "vlvm2009"; IP = "10.16.11.109"}
-    ),
-    (
-        [PSCustomObject]@{Name = "vlvm2002"; IP = "10.16.21.102"},
-        [PSCustomObject]@{Name = "vlvm2004"; IP = "10.16.21.104"},
-        [PSCustomObject]@{Name = "vlvm2006"; IP = "10.16.21.106"},
-        [PSCustomObject]@{Name = "vlvm2008"; IP = "10.16.21.108"},
+        [PSCustomObject]@{Name = "vlvm2002"; IP = "10.16.21.102"}
+        [PSCustomObject]@{Name = "vlvm2004"; IP = "10.16.21.104"}
+        [PSCustomObject]@{Name = "vlvm2006"; IP = "10.16.21.106"}
+        [PSCustomObject]@{Name = "vlvm2008"; IP = "10.16.21.108"}
         [PSCustomObject]@{Name = "vlvm2010"; IP = "10.16.21.110"}
-    )
 )
 
 function write-log{
@@ -50,7 +46,10 @@ function write-log{
     $date = Get-Date -Format s 
 
     $Loc = (get-location).path
-    $LogFile = "$Loc\VCFHostPreperations.log"
+    if((Test-Path -Path $Loc\logs) -eq "False"){
+        New-Item -ItemType Directory -Path "$Loc\Logs" | Out-Null
+    }
+    $LogFile = "$Loc\logs\VCFHostPreperations.log"
 
     if($ErrorType){
         Write-Host "$date - $Value" -ForegroundColor Red

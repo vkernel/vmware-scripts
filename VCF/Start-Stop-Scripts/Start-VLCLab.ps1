@@ -1,5 +1,5 @@
-﻿/*
- * Created on Wed Sep 02 2020
+﻿<#
+ * Created on Tue Sep 08 2020
  *
  * The MIT License (MIT)
  * Copyright (c) 2020 DAngelo Karijopawiro
@@ -20,7 +20,7 @@
  * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+#>
 
 function write-log{
     param(
@@ -34,7 +34,7 @@ function write-log{
     $date = Get-Date -Format s 
 
     $Loc = (get-location).path
-    $LogFile = "$Loc\Start-VLCLab.log"
+    $LogFile = "$Loc\log\Start-VLCLab.log"
 
     if($ErrorType){
         Write-Host "$date - $Value" -ForegroundColor Red
