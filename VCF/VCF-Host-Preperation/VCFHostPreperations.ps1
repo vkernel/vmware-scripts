@@ -143,3 +143,6 @@ foreach($a in $ServerArray){
         write-log -Value $ErrorMessage -ErrorType
     }
 }
+
+Write-Host -NoNewLine 'Press any key to continue...';
+$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
