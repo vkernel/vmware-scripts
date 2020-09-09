@@ -21,6 +21,42 @@
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #>
+function write-log{
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Value,
+        [switch]$ErrorType,
+        [switch]$WarningType,
+        [switch]$Succeeded
+    )
+    
+    $date = Get-Date -Format s 
+    $fdate = Get-Date -Format dd-mm-yyyy-HH-mm
+
+    $ScriptDirectory = $PSScriptRoot
+    if((Test-Path -Path $ScriptDirectory\logs) -like "False"){
+        New-Item -ItemType Directory -Path "$ScriptDirectory\Logs" | Out-Null
+    }
+    $LogFile = "$ScriptDirectory\logs\$fdate-output.log"
+
+    if($ErrorType){
+        Write-Host "$date - $Value" -ForegroundColor Red
+        Out-File -InputObject "$date - $Value" -FilePath $LogFile -Append 
+    }
+    elseif($WarningType){
+        Write-Host "$date - $Value"  -ForegroundColor Yellow
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+    }
+    elseif($Succeeded){
+        Write-Host "$date - $Value"  -ForegroundColor Green
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append
+    }
+    else{
+        Write-Host "$date - $Value" 
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+    }
+    
+}
 
 $nHosts  = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
 $vCenterFQDN = "vcenter-mgmt.vkernelblog.net"
@@ -35,89 +71,86 @@ try{
     write-log -Value "Connected to $vCenterFQDN"
 
     ##Shutdown all the VMs except vCenter
-    $VMs = Get-VM -ErrorAction Stop| Where-Object{($_.Name -notlike "vcenter-mgmt") -and ($_.PowerState -like "PoweredOn")}
+    $VMs = Get-VM -ErrorAction Stop| Where-Object{($_.Name -notlike "vcenter-mgmt") -and ($_.PowerState -like "PoweredOn")} | Sort-Object guestid -Descending
     foreach($VM in $VMs){
-        Shutdown-VMGuest -VM $VM -Confirm:$false -ErrorAction Stop
+        Shutdown-VMGuest -VM $VM -Confirm:$false -ErrorAction Stop | Out-Null
     }
 
     ##Check if all VMs besides vCenter are powered off.
     foreach($VM in $VMs){
         Do
         { 
-            $check = Get-VM -Name $VM -ErrorAction Stop
+            $check = Get-VM -Name $VM -ErrorAction Stop 
+            $VMname = $check.name 
             if($check.PowerState -like "PoweredOn"){
-                Write-Host "The following VM is still powered on:" $check.name 
+                write-log -Value "The following VM is still powered on: $VMname"
                 start-Sleep -Seconds 5
             }
             else{
-                Write-Host "The following VM is powered off:" $check.name 
+                write-log -Value "The following VM is powered off: $VMname" 
             }
         } 
           while($check.PowerState -ne "PoweredOff") 
     }
 
     Shutdown-VMGuest -VM $vCenterVM -Confirm:$false -ErrorAction Stop | Out-Null
-    Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction SilentlyContinue
+    write-log -Value "Powered off VM: $vCenterVM."
+    Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 
     ##Shutdown vCenter Server.
     foreach($n in $nHosts){
         Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
+        write-log -Value "Connected to nested host: $n"
         $check = Get-VM -Name $vCenterVM -ErrorAction SilentlyContinue
             if ($check){
                 Do
                 { 
                     $check2 = Get-VM -Name $vCenterVM -ErrorAction SilentlyContinue
+                    $VMname = $check2.name 
                     if($check2.PowerState -like "PoweredOn"){
-                    Write-Host "The following VM is still powered on:" $check2.name 
-                    start-Sleep -Seconds 5
-                }
-                else{
-                        Write-Host "The following VM is powered off on host: $n" $check2.name 
+                        write-log -Value "The following VM: $VMname is still powered on host: $n" 
+                        start-Sleep -Seconds 5
                     }
-                } 
-                  while($check2.PowerState -ne "PoweredOff") 
+                    else{
+                        write-log -Value "The following VM: $VMname is powered off on host: $n" 
+                        }
+                    } 
+                    while($check2.PowerState -ne "PoweredOff") 
             }else{
-                Write-Host "vCenter doesn't run on host:" $n -ForegroundColor Red
+                write-log -Value "vCenter doesn't run on host:" $n 
             }
             
     }
   
     Start-Sleep -Seconds 10
+    write-log -Value "Waiting for 10 seconds"
 
     ##Put nested hosts in maintenace mode
     foreach($n in $nHosts){
         Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
+        write-log -Value "Connected to nested host: $n"
         if((Get-VMHost -Name $n -ErrorAction SilentlyContinue).ConnectionState -eq "Connected"){
             Set-VMHost -VMHost $n -State "Maintenance" -VsanDataMigrationMode NoDataMigration | Out-Null
-            Write-Host "Host $n in maintenance mode gezet!" -ForegroundColor Green
+            write-log -Value "Nested host: $n has been put in maintenance mode!"
         }else{
-            Write-Host "Host $n was al in maintenance mode!" -ForegroundColor Red
+            write-log -Value "Nested host: $n was already in maintenace mode!" 
         }
-        Disconnect-VIServer -Server * -Force -Confirm:$false
+        Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
+        write-log -Value "Disconnected from nested host: $n"
     }
 
     ##Poweroff nested hosts
     foreach($n in $nHosts){
-        Connect-VIServer $n -User "root" -Password "VMware123!"
-        Stop-VMHost -VMHost $n -Confirm:$false
-        Write-Host "Host $n uitgeschakeld!" -ForegroundColor Red
-        Disconnect-VIServer -Server * -Force -Confirm:$false
+        Connect-VIServer $n -User "root" -Password "VMware123!" | Out-Null
+        Stop-VMHost -VMHost $n -Confirm:$false | Out-Null
+        write-log -Value "Powered off nested host: $n!" 
+        Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
+        write-log -Value "Disonnected from nested host: $n." 
     }
 }catch{
     $ErrorMessage = $_.Exception.Message
     write-log -Value $ErrorMessage -ErrorType
 }
    
-
-    
-    
-    
-
-    
-
-
-
-
-
 Write-Host -NoNewLine 'Press any key to continue...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
