@@ -62,7 +62,7 @@ function write-log{
 ##Settings
 $pHost = "esxi-1.vkernelblog.lan"
 $Credentials = Get-Credential
-##Components 
+##Components start order is: firewall first and DC second.
 $InfraComponents = "fw-1", "dc-1"
 $VCFNodes = "vcf-esxi-1", "vcf-esxi-2", "vcf-esxi-3", "vcf-esxi-4"
 ##Nested Components
