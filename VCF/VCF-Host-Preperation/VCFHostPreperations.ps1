@@ -24,16 +24,16 @@
 
 
 $ServerArray = @(
-        [PSCustomObject]@{Name = "vlvm2001"; IP = "10.16.11.101"}
-        [PSCustomObject]@{Name = "vlvm2003"; IP = "10.16.11.103"}
-        [PSCustomObject]@{Name = "vlvm2005"; IP = "10.16.11.105"}
-        [PSCustomObject]@{Name = "vlvm2007"; IP = "10.16.11.107"}
-        [PSCustomObject]@{Name = "vlvm2009"; IP = "10.16.11.109"}
-        [PSCustomObject]@{Name = "vlvm2002"; IP = "10.16.21.102"}
-        [PSCustomObject]@{Name = "vlvm2004"; IP = "10.16.21.104"}
-        [PSCustomObject]@{Name = "vlvm2006"; IP = "10.16.21.106"}
-        [PSCustomObject]@{Name = "vlvm2008"; IP = "10.16.21.108"}
-        [PSCustomObject]@{Name = "vlvm2010"; IP = "10.16.21.110"}
+        [PSCustomObject]@{Name = "vlvm2001"; IP = "10.16.11.1"}
+        [PSCustomObject]@{Name = "vlvm2003"; IP = "10.16.11.2"}
+        [PSCustomObject]@{Name = "vlvm2005"; IP = "10.16.11.3"}
+        [PSCustomObject]@{Name = "vlvm2007"; IP = "10.16.11.4"}
+        [PSCustomObject]@{Name = "vlvm2009"; IP = "10.16.11.5"}
+        [PSCustomObject]@{Name = "vlvm2002"; IP = "10.16.21.1"}
+        [PSCustomObject]@{Name = "vlvm2004"; IP = "10.16.21.2"}
+        [PSCustomObject]@{Name = "vlvm2006"; IP = "10.16.21.3"}
+        [PSCustomObject]@{Name = "vlvm2008"; IP = "10.16.21.4"}
+        [PSCustomObject]@{Name = "vlvm2010"; IP = "10.16.21.5"}
 )
 
 function write-log{
@@ -75,10 +75,10 @@ function write-log{
 
 ##Settings
 $ESXICredentails = Get-Credential -Message "Enter the credentials for the ESXI root user." 
-$DNSPrimary = "10.16.2.11"
-$DNSSecondary = "10.16.2.12" 
-$NTP = "172.17.20.230"
-$domainname = "vkernelblog.lan"
+$DNSPrimary = "10.16.2.1"
+$DNSSecondary = "10.16.2.2" 
+$NTP = "ntp.vanleeuwen.com"
+$domainname = "vanleeuwen.com"
 
 foreach($a in $ServerArray){
     $hostname = $a.Name
@@ -88,20 +88,6 @@ foreach($a in $ServerArray){
     try{
         Connect-VIServer -Server $a.IP -Credential $ESXICredentails -ErrorAction Stop | Out-Null
         write-log -Value "Connected to $fqdn"
-    }catch{
-        $ErrorMessage = $_.Exception.Message
-        write-log -Value $ErrorMessage -ErrorType
-    }
-
-    ##Configure NTP server
-    try{
-        Add-VMHostNtpServer -VMHost $a.IP -NtpServer $NTP -ErrorAction Stop | Out-Null
-        write-log -Value "Configured the following NTP server: $NTP on ESXI host: $fqdn"
-        $ntpService = Get-VMHostService -VMHost $a.IP -ErrorAction Stop | Where-Object{$_.key -eq "ntpd"}
-        $ntpService | Set-VMHostService -Policy "on" -ErrorAction Stop | Out-Null
-        write-log -Value "Configured NTP policy: 'Start and stop with host' on ESXI host: $fqdn"
-        $ntpService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Restarted VMHost service: 'ntpd' on ESXI host: $fqdn"
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
@@ -129,6 +115,20 @@ foreach($a in $ServerArray){
         write-log -Value "Configured TSM-SSH policy: 'Start and stop with host' on ESXI host: $fqdn"
         $sshService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
         write-log -Value "Restarted VMHost service: 'TSM-SSH' on ESXI host: $fqdn"
+    }catch{
+        $ErrorMessage = $_.Exception.Message
+        write-log -Value $ErrorMessage -ErrorType
+    }
+
+    ##Configure NTP server
+    try{
+        Add-VMHostNtpServer -VMHost $a.IP -NtpServer $NTP -ErrorAction Stop | Out-Null
+        write-log -Value "Configured the following NTP server: $NTP on ESXI host: $fqdn"
+        $ntpService = Get-VMHostService -VMHost $a.IP -ErrorAction Stop | Where-Object{$_.key -eq "ntpd"}
+        $ntpService | Set-VMHostService -Policy "on" -ErrorAction Stop | Out-Null
+        write-log -Value "Configured NTP policy: 'Start and stop with host' on ESXI host: $fqdn"
+        $ntpService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
+        write-log -Value "Restarted VMHost service: 'ntpd' on ESXI host: $fqdn"
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
