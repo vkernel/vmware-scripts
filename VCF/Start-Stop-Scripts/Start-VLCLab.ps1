@@ -68,7 +68,7 @@ $InfraComponents = "fw-1", "dc-1"
 $VCFNodes = "vcf-esxi-1", "vcf-esxi-2", "vcf-esxi-3", "vcf-esxi-4"
 ##Nested Components
 $nHosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
-$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager"
+$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
 $nHost_username = "root"
 $nHost_password = "VMware123!"
 $nHost_Credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nHost_username,(ConvertTo-SecureString -AsPlainText $nHost_password -Force)

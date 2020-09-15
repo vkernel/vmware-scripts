@@ -67,7 +67,7 @@ $nHosts  = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
 $nHost_username = "root"
 $nHost_password = "VMware123!"
 $nHost_Credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nHost_username,(ConvertTo-SecureString -AsPlainText $nHost_password -Force)
-$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager"
+$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
 ##Components start order is: firewall first and DC second. 
 $InfraComponents = "dc-1", "fw-1"
 
@@ -77,7 +77,7 @@ try{
         foreach($n in $nHosts){
             Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
             write-log -Value "Connected to $n"
-            if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
+            if(Get-VM -Name $Component -ErrorAction SilentlyContinue | Where-Object{$_.PowerState -like "PoweredOn"}){
                 Shutdown-VMGuest -VM $Component -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                 write-log -Value "$Component is powered off on ESXI host:  $n." -Succeeded
             }else{
