@@ -74,11 +74,12 @@ function write-log{
 }
 
 ##Settings
+$begintime = Get-Date -Format HH:mm
 $ESXICredentails = Get-Credential -Message "Enter the credentials for the ESXI root user." 
 $DNSPrimary = "10.16.2.1"
 $DNSSecondary = "10.16.2.2" 
-$NTP = "ntp.vanleeuwen.com"
-$domainname = "vanleeuwen.com"
+$NTP = "ntp.vkernelblog.com"
+$domainname = "vkernelblog.com"
 
 foreach($a in $ServerArray){
     $hostname = $a.Name
@@ -97,11 +98,11 @@ foreach($a in $ServerArray){
     try{
         $VMHostNetwork = Get-VMHostNetwork -VMHost $a.IP -ErrorAction Stop
         $VMHostNetwork | Set-VMHostNetwork -DnsAddress $DNSPrimary, $DNSSecondary -ErrorAction Stop | Out-Null
-        write-log -Value "Configured the following DNS servers: '$DNSPrimary,$DNSSecondary' on ESXI host: $fqdn"
+        write-log -Value "Configured the following DNS servers: '$DNSPrimary,$DNSSecondary' on ESXI host: $fqdn" -Succeeded
         $VMHostNetwork | Set-VMHostNetwork -HostName $hostname -ErrorAction Stop | Out-Null
-        write-log -Value "Configured the following hostname: '$hostname' on ESXI host: $fqdn"
+        write-log -Value "Configured the following hostname: '$hostname' on ESXI host: $fqdn" -Succeeded
         $VMHostNetwork | Set-VMHostNetwork -DomainName $domainname -ErrorAction Stop | Out-Null
-        write-log -Value "Configured the following domain: '$domainname' on ESXI host: $fqdn"
+        write-log -Value "Configured the following domain: '$domainname' on ESXI host: $fqdn" -Succeeded
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
@@ -112,9 +113,9 @@ foreach($a in $ServerArray){
         $VMHostNetwork = Get-VMHostNetwork -VMHost $a.IP -ErrorAction Stop
         $sshService = Get-VMHostService -VMHost $a.IP -ErrorAction Stop | Where-Object{$_.key -eq "TSM-SSH"}
         $sshService | Set-VMHostService -Policy "on" -ErrorAction Stop | Out-Null
-        write-log -Value "Configured TSM-SSH policy: 'Start and stop with host' on ESXI host: $fqdn"
+        write-log -Value "Configured TSM-SSH policy: 'Start and stop with host' on ESXI host: $fqdn" -Succeeded
         $sshService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Restarted VMHost service: 'TSM-SSH' on ESXI host: $fqdn"
+        write-log -Value "Restarted VMHost service: 'TSM-SSH' on ESXI host: $fqdn" -Succeeded
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
@@ -126,9 +127,9 @@ foreach($a in $ServerArray){
         write-log -Value "Configured the following NTP server: $NTP on ESXI host: $fqdn"
         $ntpService = Get-VMHostService -VMHost $a.IP -ErrorAction Stop | Where-Object{$_.key -eq "ntpd"}
         $ntpService | Set-VMHostService -Policy "on" -ErrorAction Stop | Out-Null
-        write-log -Value "Configured NTP policy: 'Start and stop with host' on ESXI host: $fqdn"
+        write-log -Value "Configured NTP policy: 'Start and stop with host' on ESXI host: $fqdn" -Succeeded
         $ntpService | Restart-VMHostService -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Restarted VMHost service: 'ntpd' on ESXI host: $fqdn"
+        write-log -Value "Restarted VMHost service: 'ntpd' on ESXI host: $fqdn" -Succeeded
     }catch{
         $ErrorMessage = $_.Exception.Message
         write-log -Value $ErrorMessage -ErrorType
@@ -143,6 +144,11 @@ foreach($a in $ServerArray){
         write-log -Value $ErrorMessage -ErrorType
     }
 }
+
+$endtime = Get-Date -Format HH:mm
+$ElapsedTime = New-TimeSpan –Start $begintime –End $endtime 
+$ElapsedTimeOutput = 'Duration: {0:mm} min {0:ss} sec' -f $ElapsedTime
+write-log -Value "$ElapsedTimeOutput" -Succeeded
 
 Write-Host -NoNewLine 'Press any key to continue...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
