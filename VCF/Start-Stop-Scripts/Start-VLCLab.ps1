@@ -32,7 +32,7 @@ function write-log{
     )
     
     $date = Get-Date -Format s 
-    $fdate = Get-Date -Format dd-mm-yyyy
+    $fdate = Get-Date -Format dd-MM-yyyy
 
     $ScriptDirectory = $PSScriptRoot
     if((Test-Path -Path $ScriptDirectory\logs) -like "False"){
@@ -83,8 +83,6 @@ try{
     foreach($i in $InfraComponents){
         write-log -Value "Starting VM: $i"
         Start-VM -VM $i -ErrorAction Stop | Out-Null
-        $ErrorMessage = $_.Exception.Message
-        write-log -Value $ErrorMessage -ErrorType
         do{
             write-log -Value "Checking if VMtools are up and running on VM: $i"
             $checkVMTools = (Wait-Tools -VM $i -ErrorAction Stop).PowerState 

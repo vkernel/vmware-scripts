@@ -46,7 +46,7 @@ function write-log{
     )
     
     $date = Get-Date -Format s 
-    $fdate = Get-Date -Format dd-mm-yyyy
+    $fdate = Get-Date -Format dd-MM-yyyy
 
     $ScriptDirectory = $PSScriptRoot
     if((Test-Path -Path $ScriptDirectory\logs) -like "False"){
