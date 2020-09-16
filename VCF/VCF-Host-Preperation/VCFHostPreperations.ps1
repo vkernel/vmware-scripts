@@ -74,7 +74,7 @@ function write-log{
 }
 
 ##Settings
-$begintime = Get-Date -Format HH:mm
+$begintime = Get-Date 
 $ESXICredentails = Get-Credential -Message "Enter the credentials for the ESXI root user." 
 $DNSPrimary = "10.16.2.1"
 $DNSSecondary = "10.16.2.2" 
@@ -145,7 +145,7 @@ foreach($a in $ServerArray){
     }
 }
 
-$endtime = Get-Date -Format HH:mm
+$endtime = Get-Date
 $ElapsedTime = New-TimeSpan –Start $begintime –End $endtime 
 $ElapsedTimeOutput = 'Duration: {0:mm} min {0:ss} sec' -f $ElapsedTime
 write-log -Value "$ElapsedTimeOutput" -Succeeded

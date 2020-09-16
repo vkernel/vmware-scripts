@@ -58,7 +58,7 @@ function write-log{
     
 }
 
-$begintime = Get-Date -Format HH:mm
+$begintime = Get-Date 
 ##Physical ESXI host Settings
 $pHost = "esxi-1.vkernelblog.lan"
 $Credentials = Get-Credential -Message "Enter the credentials of the physical ESXI host."
@@ -148,7 +148,7 @@ try{
     write-log -Value $ErrorMessage -ErrorType
 }
 
-$endtime = Get-Date -Format HH:mm
+$endtime = Get-Date
 $ElapsedTime = New-TimeSpan –Start $begintime –End $endtime 
 $ElapsedTimeOutput = 'Duration: {0:mm} min {0:ss} sec' -f $ElapsedTime
 write-log -Value "$ElapsedTimeOutput" -Succeeded
