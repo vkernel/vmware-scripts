@@ -60,39 +60,73 @@ function write-log{
 
 $begintime = Get-Date 
 ##Physical ESXI host Settings
-$pHost = "esxi-1.vkernelblog.lan"
+$pHost = "alm-esx02.vkb.lan"
 $Credentials = Get-Credential -Message "Enter the credentials of the physical ESXI host."
 ##Nested Components
-$nHosts  = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
-$nHost_username = "root"
-$nHost_password = "VMware123!"
-$nHost_Credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nHost_username,(ConvertTo-SecureString -AsPlainText $nHost_password -Force)
+$nHosts = @(
+        [PSCustomObject]@{Name = "vcf-esxi-1"; IP = "192.168.33.25"}
+        [PSCustomObject]@{Name = "vcf-esxi-2"; IP = "192.168.33.26"}
+        [PSCustomObject]@{Name = "vcf-esxi-3"; IP = "192.168.33.27"}
+        [PSCustomObject]@{Name = "vcf-esxi-4"; IP = "192.168.33.28"}
+        [PSCustomObject]@{Name = "vcf-esxi-5"; IP = "192.168.33.29"}
+        [PSCustomObject]@{Name = "vcf-esxi-6"; IP = "192.168.33.30"}
+)
+$nCredentials = Get-Credential -Message "Enter the credentials of the nested ESXI hosts."
 $SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
-##Components start order is: firewall first and DC second. 
-$InfraComponents = "dc-1", "fw-1"
+$vCLS = $true
+
 
 try{
+    ##Stoping vCLS
+    if($vCLS -eq $true){
+        foreach($n in $nHosts){
+            $nHostName = $n.Name
+            $nHostIP = $n.IP
+            Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
+            write-log -Value "Connected to $nHostName"
+            $vCLSnodes = Get-VM | Where-Object{$_.Name -like "vCLS*"}
+            foreach($vCLSnode in $vCLSnodes){
+                if(Get-VM -Name $vCLSnode -ErrorAction SilentlyContinue | Where-Object{$_.PowerState -like "PoweredOn"}){
+                Shutdown-VMGuest -VM $vCLSnode -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+                write-log -Value "$vCLSnode is powered off on ESXI host:  $nHostName." -Succeeded
+                }elseif(Get-VM -Name $vCLSnode -ErrorAction SilentlyContinue | Where-Object{$_.PowerState -like "PoweredOff"}){
+                    write-log -Value "$vCLSnode is already powered off on ESXI host: $nHostName." -WarningType
+                }else{
+                    write-log -Value "$vCLSnode is not available on ESXI host: $nHostName." -WarningType
+                }
+            }
+            Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
+            write-log -Value "Disconnected from nested host: $nHostName"
+        }
+    }else{
+        write-log -Value "vCLS switch is turned off in the configuration." -WarningType
+    }
+
     ##Stoping VCF Components
     foreach($Component in $SDDC_Components){
         foreach($n in $nHosts){
-            Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
-            write-log -Value "Connected to $n"
+            $nHostName = $n.Name
+            $nHostIP = $n.IP
+            Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
+            write-log -Value "Connected to $nHostName"
             if(Get-VM -Name $Component -ErrorAction SilentlyContinue | Where-Object{$_.PowerState -like "PoweredOn"}){
                 Shutdown-VMGuest -VM $Component -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                write-log -Value "$Component is powered off on ESXI host:  $n." -Succeeded
+                write-log -Value "$Component is powered off on ESXI host: $nHostName." -Succeeded
             }else{
-                write-log -Value "$Component is not available on ESXI host: $n." -WarningType
+                write-log -Value "$Component is not available on ESXI host: $nHostName." -WarningType
             }
             Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
-            write-log -Value "Disconnected from nested host: $n"
+            write-log -Value "Disconnected from nested host: $nHostName"
         }
     }
 
     ##Checking if the VCF Components are powered off
     foreach($Component in $SDDC_Components){
         foreach($n in $nHosts){
-            Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
-            write-log -Value "Connected to $n"
+            $nHostName = $n.Name
+            $nHostIP = $n.IP
+            Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
+            write-log -Value "Connected to $nHostName"
             if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
                 write-log -Value "Checking powerstate of component: $Component"
                 do{
@@ -100,48 +134,38 @@ try{
                 }while ($checkComponent -ne "PoweredOff")
                 write-log -Value "The powerstate of component: $Component is PoweredOff." -Succeeded
             }else{
-                write-log -Value "$Component is not available on ESXI host: $n." -WarningType
+                write-log -Value "$Component is not available on ESXI host: $nHostName." -WarningType
             }
             Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
-            write-log -Value "Disconnected from nested host: $n"
+            write-log -Value "Disconnected from nested host: $nHostName"
         }
     }
 
     ##Put nested hosts in maintenace mode
     foreach($n in $nHosts){
-        Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
+        $nHostName = $n.Name
+        $nHostIP = $n.IP
+        Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
         write-log -Value "Connected to nested host: $n"
-        if((Get-VMHost -Name $n -ErrorAction SilentlyContinue).ConnectionState -eq "Connected"){
-            Set-VMHost -VMHost $n -State "Maintenance" -VsanDataMigrationMode NoDataMigration -ErrorAction Stop| Out-Null
-            write-log -Value "Nested host: $n has been put in maintenance mode!" -Succeeded
+        if((Get-VMHost -Name $nHostIP -ErrorAction SilentlyContinue).ConnectionState -eq "Connected"){
+            Set-VMHost -VMHost $nHostIP -State "Maintenance" -VsanDataMigrationMode NoDataMigration -ErrorAction Stop| Out-Null
+            write-log -Value "Nested host: $nHostName has been put in maintenance mode!" -Succeeded
         }else{
-            write-log -Value "Nested host: $n was already in maintenace mode!"  -WarningType
+            write-log -Value "Nested host: $nHostName was already in maintenace mode!"  -WarningType
         }
         Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
-        write-log -Value "Disconnected from nested host: $n"
+        write-log -Value "Disconnected from nested host: $nHostName"
     }
 
     ##Poweroff nested hosts
     foreach($n in $nHosts){
-        Connect-VIServer $n -User "root" -Password "VMware123!" | Out-Null
-        Stop-VMHost -VMHost $n -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Powered off nested host: $n!" -Succeeded
+        $nHostName = $n.Name
+        $nHostIP = $n.IP
+        Connect-VIServer $nHostIP -Credential $nCredentials | Out-Null
+        Stop-VMHost -VMHost $nHostIP -Confirm:$false -ErrorAction Stop | Out-Null
+        write-log -Value "Powered off nested host: $nHostName!" -Succeeded
         Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
-        write-log -Value "Disonnected from nested host: $n." 
-    }
-
-    ##Stoping Infra Components
-    foreach($i in $InfraComponents){
-            Connect-VIServer $pHost -Credential $Credentials -ErrorAction Stop | Out-Null
-            write-log -Value "Connected to $n"
-            if(Get-VM -Name $i -ErrorAction SilentlyContinue){
-                Shutdown-VMGuest -VM $i -Confirm:$false -ErrorAction Stop | Out-Null
-                write-log -Value "$i is powered off on ESXI host:  $n." -Succeeded
-            }else{
-                write-log -Value "$i is not available on ESXI host: $n." -WarningType
-            }
-            Disconnect-VIServer -Server * -Force -Confirm:$false | Out-Null
-            write-log -Value "Disconnected from nested host: $n"
+        write-log -Value "Disonnected from nested host: $nHostName." 
     }
 }catch{
     $ErrorMessage = $_.Exception.Message

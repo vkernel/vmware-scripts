@@ -25,7 +25,7 @@
 function write-log{
     param(
         [Parameter(Mandatory=$true)]
-        [string]$Value,
+        [string]$nalue,
         [switch]$ErrorType,
         [switch]$WarningType,
         [switch]$Succeeded
@@ -41,67 +41,61 @@ function write-log{
     $LogFile = "$ScriptDirectory\logs\$fdate-Start-VLCLab.log"
 
     if($ErrorType){
-        Write-Host "$date - $Value" -ForegroundColor Red
-        Out-File -InputObject "$date - $Value" -FilePath $LogFile -Append 
+        Write-Host "$date - $nalue" -ForegroundColor Red
+        Out-File -InputObject "$date - $nalue" -FilePath $LogFile -Append 
     }
     elseif($WarningType){
-        Write-Host "$date - $Value"  -ForegroundColor Yellow
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+        Write-Host "$date - $nalue"  -ForegroundColor Yellow
+        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append 
     }
     elseif($Succeeded){
-        Write-Host "$date - $Value"  -ForegroundColor Green
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append
+        Write-Host "$date - $nalue"  -ForegroundColor Green
+        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append
     }
     else{
-        Write-Host "$date - $Value" 
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
+        Write-Host "$date - $nalue" 
+        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append 
     }
     
 }
 
 $begintime = Get-Date 
 ##Physical ESXI host Settings
-$pHost = "esxi-1.vkernelblog.lan"
-$Credentials = Get-Credential -Message "Enter the credentials of the physical ESXI host."
-##Components start order is: firewall first and DC second. 
-$InfraComponents = "fw-1", "dc-1"
-$VCFNodes = "vcf-esxi-1", "vcf-esxi-2", "vcf-esxi-3", "vcf-esxi-4"
+$pHost = "alm-esx02.vkb.lan"
+$pCredentials = Get-Credential -Message "Enter the credentials of the physical ESXI host."
 ##Nested Components
-$nHosts = "10.0.10.100", "10.0.10.101", "10.0.10.102", "10.0.10.103"
+$nHosts = @(
+        [PSCustomObject]@{Name = "vcf-esxi-1"; IP = "192.168.33.25"}
+        [PSCustomObject]@{Name = "vcf-esxi-2"; IP = "192.168.33.26"}
+        [PSCustomObject]@{Name = "vcf-esxi-3"; IP = "192.168.33.27"}
+        [PSCustomObject]@{Name = "vcf-esxi-4"; IP = "192.168.33.28"}
+        [PSCustomObject]@{Name = "vcf-esxi-5"; IP = "192.168.33.29"}
+        [PSCustomObject]@{Name = "vcf-esxi-6"; IP = "192.168.33.30"}
+)
+$nCredentials = Get-Credential -Message "Enter the credentials of the nested ESXI hosts."
 $SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
-$nHost_username = "root"
-$nHost_password = "VMware123!"
-$nHost_Credentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nHost_username,(ConvertTo-SecureString -AsPlainText $nHost_password -Force)
+
 
 
 try{
     ##Connecting to physical host
-    Connect-VIServer -Server $pHost -Credential $Credentials -ErrorAction Stop | Out-Null
+    Connect-VIServer -Server $pHost -Credential $pCredentials -ErrorAction Stop | Out-Null
     write-log -Value "Connected to $pHost"
 
-    ##Starting InfraComponents
-    foreach($i in $InfraComponents){
-        write-log -Value "Starting VM: $i"
-        Start-VM -VM $i -ErrorAction Stop | Out-Null
-        do{
-            write-log -Value "Checking if VMtools are up and running on VM: $i"
-            $checkVMTools = (Wait-Tools -VM $i -ErrorAction Stop).PowerState 
-            write-log -Value "VM: $i is online!" -Succeeded
-        }while ($checkVMTools -ne "PoweredOn")
-    }
-
     ##Starting VCFNodes.
-    foreach($v in $VCFNodes){
-    write-log -Value "Starting Nested ESXI node: $v"
-    Start-VM -VM $v -ErrorAction Stop | Out-Null
+    foreach($n in $nHosts){
+    $nHostName = $n.Name
+    write-log -Value "Starting Nested ESXI node: $nHostName"
+    Start-VM -VM $nHostName -ErrorAction Stop | Out-Null
     }
 
     ##Checking if VMtool are up and running from the VCF nodes.
-    foreach($v in $VCFNodes){
+    foreach($n in $nHosts){
+        $nHostName = $n.Name
         do{
-            write-log -Value "Checking if VMtools are up and running on VM: $v"
-            $checkVMTools = (Wait-Tools -VM $v -ErrorAction Stop).PowerState
-            write-log -Value "VM: $v is online!" -Succeeded
+            write-log -Value "Checking if VMtools are up and running on VM: $nHostName"
+            $checkVMTools = (Wait-Tools -VM $nHostName -ErrorAction Stop).PowerState
+            write-log -Value "VM: $nHostName is online!" -Succeeded
         }while ($checkVMTools -ne "PoweredOn")
     }
 
@@ -111,13 +105,15 @@ try{
 
     ##Remove nested hosts out of maintenance mode
     foreach($n in $nHosts){
-        Connect-VIServer -Server $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
-        write-log -Value "Connected to $n"
-        write-log -Value "Removing nested host: $n out of maintenance mode."
-        Set-VMHost -VMHost $n -State Connected -ErrorAction Stop | Out-Null
-        write-log -Value "Host $n is out of maintenance mode." -Succeeded
+        $nHostName = $n.Name
+        $nHostIP = $n.IP
+        Connect-VIServer -Server $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
+        write-log -Value "Connected to $nHostName"
+        write-log -Value "Removing nested host: $nHostName out of maintenance mode."
+        Set-VMHost -VMHost $nHostIP -State Connected -ErrorAction Stop | Out-Null
+        write-log -Value "Host $nHostName is out of maintenance mode." -Succeeded
         Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Disconnected from $n"
+        write-log -Value "Disconnected from $nHostName"
     }
 
     Start-Sleep -Seconds 10
@@ -125,23 +121,24 @@ try{
     ##Starting VCF Components
     foreach($Component in $SDDC_Components){
         foreach($n in $nHosts){
-            Connect-VIServer $n -Credential $nHost_Credentials -ErrorAction Stop | Out-Null
-            write-log -Value "Connected to $n"
+            $nHostName = $n.Name
+            $nHostIP = $n.IP
+            Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
+            write-log -Value "Connected to $nHostName"
             if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
                 Start-VM -VM $Component -ErrorAction Stop | Out-Null
-                write-log -Value "$Component is started on ESXI host:  $n." -Succeeded
+                write-log -Value "$Component is started on ESXI host:  $nHostName." -Succeeded
             }else{
-                write-log -Value "$Component is not available on ESXI host: $n." -WarningType
+                write-log -Value "$Component is not available on ESXI host: $nHostName." -WarningType
             }
             Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop
-            write-log -Value "Disconnected from $n"
+            write-log -Value "Disconnected from $nHostName"
         }
     }
 }catch{
     $ErrorMessage = $_.Exception.Message
     write-log -Value $ErrorMessage -ErrorType
 }
-
 
 $endtime = Get-Date
 $ElapsedTime = New-TimeSpan –Start $begintime –End $endtime 
