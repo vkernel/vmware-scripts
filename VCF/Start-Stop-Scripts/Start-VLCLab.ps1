@@ -25,7 +25,7 @@
 function write-log{
     param(
         [Parameter(Mandatory=$true)]
-        [string]$nalue,
+        [string]$Value,
         [switch]$ErrorType,
         [switch]$WarningType,
         [switch]$Succeeded
