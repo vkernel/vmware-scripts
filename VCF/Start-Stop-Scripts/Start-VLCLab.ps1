@@ -41,20 +41,20 @@ function write-log{
     $LogFile = "$ScriptDirectory\logs\$fdate-Start-VLCLab.log"
 
     if($ErrorType){
-        Write-Host "$date - $nalue" -ForegroundColor Red
-        Out-File -InputObject "$date - $nalue" -FilePath $LogFile -Append 
+        Write-Host "$date - $Value" -ForegroundColor Red
+        Out-File -InputObject "$date - $Value" -FilePath $LogFile -Append 
     }
     elseif($WarningType){
-        Write-Host "$date - $nalue"  -ForegroundColor Yellow
-        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append 
+        Write-Host "$date - $Value"  -ForegroundColor Yellow
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
     }
     elseif($Succeeded){
-        Write-Host "$date - $nalue"  -ForegroundColor Green
-        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append
+        Write-Host "$date - $Value"  -ForegroundColor Green
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append
     }
     else{
-        Write-Host "$date - $nalue" 
-        Out-File -InputObject "$date - $nalue"  -FilePath $LogFile -Append 
+        Write-Host "$date - $Value" 
+        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
     }
     
 }
