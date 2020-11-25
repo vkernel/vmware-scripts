@@ -82,7 +82,7 @@ $nHosts = @(
         [PSCustomObject]@{Name = "vcf-esxi-6"; IP = "192.168.11.32"}
 )
 $nUser = "root"
-$nPassword = "VMware1!VKB!"
+$nPassword = "VMware1!VMware1!"
 $nCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nUser, (ConvertTo-SecureString -String $nPassword -AsPlainText -Force)
 ##VCF Components (VM names of the components)
 $VCF_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
