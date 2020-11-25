@@ -22,13 +22,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #>
 
-function write-log{
+function Write-Log{
     param(
         [Parameter(Mandatory=$true)]
         [string]$Value,
         [switch]$ErrorType,
-        [switch]$WarningType,
-        [switch]$Succeeded
+        [switch]$InfoType
     )
     
     $date = Get-Date -Format s 
@@ -40,110 +39,126 @@ function write-log{
     }
     $LogFile = "$ScriptDirectory\logs\$fdate-Start-VLCLab.log"
 
-    if($ErrorType){
-        Write-Host "$date - $Value" -ForegroundColor Red
-        Out-File -InputObject "$date - $Value" -FilePath $LogFile -Append 
-    }
-    elseif($WarningType){
-        Write-Host "$date - $Value"  -ForegroundColor Yellow
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
-    }
-    elseif($Succeeded){
-        Write-Host "$date - $Value"  -ForegroundColor Green
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append
-    }
-    else{
-        Write-Host "$date - $Value" 
-        Out-File -InputObject "$date - $Value"  -FilePath $LogFile -Append 
-    }
-    
+    if($verboseLogging -eq $true){
+        if($ErrorType){
+        Write-Host "$date - ERROR: $Value" -ForegroundColor Red
+        Out-File -InputObject "$date - ERROR: $Value" -FilePath $LogFile -Append 
+        }
+        elseif($InfoType){
+            Write-Host "$date - INFO: $Value" -ForegroundColor White
+            Out-File -InputObject "$date - INFO: $Value"  -FilePath $LogFile -Append 
+        }
+        else{
+            Write-Host "$date - INFO: $Value" -ForegroundColor Green
+            Out-File -InputObject "$date - INFO: $Value"  -FilePath $LogFile -Append 
+        }
+    }else{
+        if($ErrorType){
+            Write-Host "$date - ERROR: $Value" -ForegroundColor Red
+            Out-File -InputObject "$date - ERROR: $Value" -FilePath $LogFile -Append 
+        }
+        elseif($InfoType){
+            #nothing to log
+        }else{
+            Write-Host "$date - INFO: $Value" -ForegroundColor Green
+            Out-File -InputObject "$date - INFO: $Value"  -FilePath $LogFile -Append 
+        }
+    } 
 }
 
-$begintime = Get-Date 
-##Physical ESXI host Settings
-$pHost = "alm-esx02.vkb.lan"
-$pCredentials = Get-Credential -Message "Enter the credentials of the physical ESXI host."
-##Nested Components
+##Settings
+$begintime = Get-Date
+$verboseLogging = $false  #$true or $false
+##Physical ESXI host or vCenter server settings
+$pHost = "esxi-1.lab.vkb.lan"
+$pCredentials = Get-Credential -Message "Enter the credentials of the physical ESXI host or vCenter server."
+##Nested ESXI hosts
 $nHosts = @(
-        [PSCustomObject]@{Name = "vcf-esxi-1"; IP = "192.168.33.25"}
-        [PSCustomObject]@{Name = "vcf-esxi-2"; IP = "192.168.33.26"}
-        [PSCustomObject]@{Name = "vcf-esxi-3"; IP = "192.168.33.27"}
-        [PSCustomObject]@{Name = "vcf-esxi-4"; IP = "192.168.33.28"}
-        [PSCustomObject]@{Name = "vcf-esxi-5"; IP = "192.168.33.29"}
-        [PSCustomObject]@{Name = "vcf-esxi-6"; IP = "192.168.33.30"}
+        [PSCustomObject]@{Name = "vcf-esxi-1"; IP = "192.168.11.27"}
+        [PSCustomObject]@{Name = "vcf-esxi-2"; IP = "192.168.11.28"}
+        [PSCustomObject]@{Name = "vcf-esxi-3"; IP = "192.168.11.29"}
+        [PSCustomObject]@{Name = "vcf-esxi-4"; IP = "192.168.11.30"}
+        [PSCustomObject]@{Name = "vcf-esxi-5"; IP = "192.168.11.31"}
+        [PSCustomObject]@{Name = "vcf-esxi-6"; IP = "192.168.11.32"}
 )
-$nCredentials = Get-Credential -Message "Enter the credentials of the nested ESXI hosts."
-$SDDC_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
-
-
+$nUser = "root"
+$nPassword = "VMware1!VKB!"
+$nCredentials = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $nUser, (ConvertTo-SecureString -String $nPassword -AsPlainText -Force)
+##VCF Components (VM names of the components)
+$VCF_Components = "vcenter-mgmt", "nsx-mgmt-1", "sddc-manager", "edge01-mgmt", "edge02-mgmt"
 
 try{
+    Write-Log -Value "Starting Start-VLCLab.ps1 script..."
+    If($verboseLogging -eq $true){
+        Write-Log -Value "Verbose logging enabled."
+    }
+
     ##Connecting to physical host
     Connect-VIServer -Server $pHost -Credential $pCredentials -ErrorAction Stop | Out-Null
-    write-log -Value "Connected to $pHost"
+    Write-Log -Value "Connected to physical ESXI host: $pHost" 
 
     ##Starting VCFNodes.
     foreach($n in $nHosts){
-    $nHostName = $n.Name
-    write-log -Value "Starting Nested ESXI node: $nHostName"
-    Start-VM -VM $nHostName -ErrorAction Stop | Out-Null
+        $nHostName = $n.Name
+        Start-VM -VM $nHostName -ErrorAction Stop | Out-Null
+        Write-Log -Value "Started nested ESXI host: $nHostName" 
     }
 
     ##Checking if VMtool are up and running from the VCF nodes.
     foreach($n in $nHosts){
         $nHostName = $n.Name
         do{
-            write-log -Value "Checking if VMtools are up and running on VM: $nHostName"
+            Write-Log -Value "Checking VMtools status on nested ESXI host: $nHostName"
             $checkVMTools = (Wait-Tools -VM $nHostName -ErrorAction Stop).PowerState
-            write-log -Value "VM: $nHostName is online!" -Succeeded
+            Write-Log -Value "VMtools are running on nested ESXI host: $nHostName" 
         }while ($checkVMTools -ne "PoweredOn")
     }
 
     ##Disconnecting from physical host
     Disconnect-VIServer -Server * -Confirm:$false -ErrorAction Stop | Out-Null
-    write-log -Value "Disconnected from $pHost"
+    Write-Log -Value "Disconnected from physical ESXI host: $pHost"
 
     ##Remove nested hosts out of maintenance mode
     foreach($n in $nHosts){
         $nHostName = $n.Name
         $nHostIP = $n.IP
         Connect-VIServer -Server $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
-        write-log -Value "Connected to $nHostName"
-        write-log -Value "Removing nested host: $nHostName out of maintenance mode."
+        Write-Log -Value "Connected to nested ESXI host: $nHostName" -InfoType
+        Write-Log -Value "Removing nested ESXI host: $nHostName out of maintenance mode." -InfoType
         Set-VMHost -VMHost $nHostIP -State Connected -ErrorAction Stop | Out-Null
-        write-log -Value "Host $nHostName is out of maintenance mode." -Succeeded
+        Write-Log -Value "Nested ESXI host: $nHostName is out of maintenance mode." 
         Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop | Out-Null
-        write-log -Value "Disconnected from $nHostName"
+        Write-Log -Value "Disconnected from nested ESXI host: $nHostName" -InfoType
     }
 
     Start-Sleep -Seconds 10
 
     ##Starting VCF Components
-    foreach($Component in $SDDC_Components){
+    foreach($Component in $VCF_Components){
         foreach($n in $nHosts){
             $nHostName = $n.Name
             $nHostIP = $n.IP
             Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
-            write-log -Value "Connected to $nHostName"
+            Write-Log -Value "Connected to nested ESXI host: $nHostName" -InfoType
             if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
                 Start-VM -VM $Component -ErrorAction Stop | Out-Null
-                write-log -Value "$Component is started on ESXI host:  $nHostName." -Succeeded
+                Write-Log -Value "Started $Component on nested ESXI host: $nHostName." 
             }else{
-                write-log -Value "$Component is not available on ESXI host: $nHostName." -WarningType
+                Write-Log -Value "$Component is not available on ESXI host: $nHostName." -InfoType
             }
             Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop
-            write-log -Value "Disconnected from $nHostName"
+            Write-Log -Value "Disconnected from nested ESXI host: $nHostName" -InfoType
         }
     }
 }catch{
     $ErrorMessage = $_.Exception.Message
-    write-log -Value $ErrorMessage -ErrorType
+    Write-Log -Value $ErrorMessage -ErrorType
 }
 
 $endtime = Get-Date
 $ElapsedTime = New-TimeSpan –Start $begintime –End $endtime 
 $ElapsedTimeOutput = 'Duration: {0:mm} min {0:ss} sec' -f $ElapsedTime
-write-log -Value "$ElapsedTimeOutput" -Succeeded
+Write-Log -Value "$ElapsedTimeOutput" 
 
 Write-Host -NoNewLine 'Press any key to continue...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
