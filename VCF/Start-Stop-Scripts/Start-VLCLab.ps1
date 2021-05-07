@@ -94,13 +94,13 @@ try{
     }
 
     ##Connecting to physical host
-    Connect-VIServer -Server $pHost -Credential $pCredentials -ErrorAction Stop | Out-Null
+    $viserver = Connect-VIServer -Server $pHost -Credential $pCredentials -ErrorAction Stop
     Write-Log -Value "Connected to physical ESXI host: $pHost" 
 
     ##Starting VCFNodes.
     foreach($n in $nHosts){
         $nHostName = $n.Name
-        Start-VM -VM $nHostName -ErrorAction Stop | Out-Null
+        Start-VM -Server $viserver -VM $nHostName -ErrorAction Stop | Out-Null
         Write-Log -Value "Started nested ESXI host: $nHostName" 
     }
 
@@ -109,47 +109,49 @@ try{
         $nHostName = $n.Name
         do{
             Write-Log -Value "Checking VMtools status on nested ESXI host: $nHostName"
-            $checkVMTools = (Wait-Tools -VM $nHostName -ErrorAction Stop).PowerState
+            $checkVMTools = (Wait-Tools -Server $viserver -VM $nHostName -ErrorAction Stop).PowerState
             Write-Log -Value "VMtools are running on nested ESXI host: $nHostName" 
         }while ($checkVMTools -ne "PoweredOn")
     }
 
     ##Disconnecting from physical host
-    Disconnect-VIServer -Server * -Confirm:$false -ErrorAction Stop | Out-Null
+    Disconnect-VIServer -Server $viserver -Confirm:$false -ErrorAction Stop | Out-Null
     Write-Log -Value "Disconnected from physical ESXI host: $pHost"
 
+	##Connect to nested hosts
+	$nServers = [System.Collections.Arraylist]@()
+    foreach($n in $nHosts){
+        $nServer = Connect-VIServer -Server ($n.IP) -Credential $nCredentials -ErrorAction Stop
+		[void]$nServers.Add($nServer)
+        Write-Log -Value "Connected to nested ESXI host: $($n.Name)" -InfoType
+	}
+	
     ##Remove nested hosts out of maintenance mode
     foreach($n in $nHosts){
         $nHostName = $n.Name
         $nHostIP = $n.IP
-        Connect-VIServer -Server $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
-        Write-Log -Value "Connected to nested ESXI host: $nHostName" -InfoType
         Write-Log -Value "Removing nested ESXI host: $nHostName out of maintenance mode." -InfoType
-        Set-VMHost -VMHost $nHostIP -State Connected -ErrorAction Stop | Out-Null
+        Set-VMHost -Server $nServers -VMHost $nHostIP -State Connected -ErrorAction Stop | Out-Null
         Write-Log -Value "Nested ESXI host: $nHostName is out of maintenance mode." 
-        Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop | Out-Null
-        Write-Log -Value "Disconnected from nested ESXI host: $nHostName" -InfoType
     }
 
     Start-Sleep -Seconds 10
 
     ##Starting VCF Components
     foreach($Component in $VCF_Components){
-        foreach($n in $nHosts){
-            $nHostName = $n.Name
-            $nHostIP = $n.IP
-            Connect-VIServer $nHostIP -Credential $nCredentials -ErrorAction Stop | Out-Null
-            Write-Log -Value "Connected to nested ESXI host: $nHostName" -InfoType
-            if(Get-VM -Name $Component -ErrorAction SilentlyContinue){
-                Start-VM -VM $Component -ErrorAction Stop | Out-Null
-                Write-Log -Value "Started $Component on nested ESXI host: $nHostName." 
-            }else{
-                Write-Log -Value "$Component is not available on ESXI host: $nHostName." -InfoType
-            }
-            Disconnect-VIServer -Server * -Force -Confirm:$false -ErrorAction Stop
-            Write-Log -Value "Disconnected from nested ESXI host: $nHostName" -InfoType
+		$vm = Get-VM -Server $nServers -Name $Component -ErrorAction SilentlyContinue
+		if($vm){
+			Start-VM -VM $vm -ErrorAction Stop | Out-Null
+			Write-Log -Value "Started $Component on nested ESXI host: $($vm.VMHost)" 
+		}else{
+			Write-Log -Value "$Component is not available on ESXI hosts: $nServers." -InfoType
         }
     }
+	
+	##Disconnect from nested hosts
+	Disconnect-VIServer -Server $nServers -Force -Confirm:$false -ErrorAction Stop
+    Write-Log -Value "Disconnected from nested ESXI hosts: $nServers" -InfoType
+	
 }catch{
     $ErrorMessage = $_.Exception.Message
     Write-Log -Value $ErrorMessage -ErrorType
