@@ -5,10 +5,10 @@ variable "vcd_allow_unverified_ssl" {
     default = true
 }
 variable "vcd_url" {}
-variable "org_name" {}
-variable "org_vdc" {}
-variable "org_vdc_group" {}
-variable "org_edge_name" {}
+variable "vcd_org_name" {}
+variable "vcd_org_vdc" {}
+variable "vcd_vdc_group" {}
+variable "vcd_edge_name" {}
 variable "vcd_max_retry_timeout" {
     default = 60
 }

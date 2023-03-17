@@ -19,7 +19,7 @@ locals {
       ipsec_vpn_tunnel_diffie_hellman_group = "GROUP14"
       ipsec_vpn_tunnel_association_life_time = 3600
       ipsec_vpn_dpd_probe_interval = "30"
-    }
+    },
     to_tenant_2 = {
       ipsec_vpn_description = "IPSEC VPN tunnel 2 - created with Terraform"
       ipsec_vpn_password_id = 18
