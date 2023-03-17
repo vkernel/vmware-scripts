@@ -1,0 +1,10 @@
+vcd_passwordstate_password_id = 19
+vcd_url = "https://cloud-director-fqdn/api"
+vcd_max_retry_timeout = "60"
+vcd_allow_unverified_ssl = "true"
+org_name = "org-name-here"
+org_vdc = "org-vdc-here"
+org_vdc_group = "vdcgroup-here"
+org_edge_name = "edge-name-here"
+passwordstate_url = "https://passwordstate-fqdn"
+passwordstate_api_key = "api-key-here"
