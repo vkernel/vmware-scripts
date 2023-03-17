@@ -1,4 +1,3 @@
-vcd_passwordstate_password_id = 19
 vcd_url = "https://cloud-director-fqdn/api"
 vcd_max_retry_timeout = "60"
 vcd_allow_unverified_ssl = "true"
