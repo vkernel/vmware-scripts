@@ -47,8 +47,8 @@ provider "vcd" {
   url      = var.vcd_url
   user     = jsondecode(data.http.passwordstate_vcd_retrieve_password.response_body)[index(jsondecode(data.http.passwordstate_vcd_retrieve_password.response_body).*.PasswordID, var.vcd_passwordstate_password_id)].UserName
   password = jsondecode(data.http.passwordstate_vcd_retrieve_password.response_body)[index(jsondecode(data.http.passwordstate_vcd_retrieve_password.response_body).*.PasswordID, var.vcd_passwordstate_password_id)].Password
-  org      = var.org_name
-  vdc      = var.org_vdc
+  org      = var.vcd_org_name
+  vdc      = var.vcd_org_vdc
 
   max_retry_timeout    = "120"
   allow_unverified_ssl = "true"
@@ -58,20 +58,20 @@ provider "vcd" {
 
 # Get vDC group
 data "vcd_vdc_group" "vdc_group" {
-  org  = var.org_name
-  name = var.org_vdc_group
+  org  = var.vcd_org_name
+  name = var.vcd_org_vdc_group
 }
 
 # Get tenant NSX-T Edge based on vDC group
 data "vcd_nsxt_edgegateway" "edge" {
-  org      = var.org_name
+  org      = var.vcd_org_name
   owner_id = data.vcd_vdc_group.vdc_group.id
-  name     = var.org_edge_name
+  name     = var.vcd_org_edge_name
 }
 
 # Maintaining IPSec VPN tunnels
 resource "vcd_nsxt_ipsec_vpn_tunnel" "tunnels" {
-  org = var.org_name
+  org = var.vcd_org_name
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.edge.id
   for_each = local.ipsec_vpn_tunnels

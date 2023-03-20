@@ -27,8 +27,8 @@ provider "vcd" {
   url      = var.vcd_url
   user     = var.vcd_user
   password = var.vcd_pass
-  org      = var.org_name
-  vdc      = var.org_vdc
+  org      = var.vcd_org_name
+  vdc      = var.vcd_org_vdc
 
   max_retry_timeout    = "120"
   allow_unverified_ssl = "true"
@@ -38,20 +38,20 @@ provider "vcd" {
 
 # Get VDC group
 data "vcd_vdc_group" "vdc_group" {
-  org  = var.org_name
-  name = var.org_vdc_group
+  org  = var.vcd_org_name
+  name = var.vcd_org_vdc_group
 }
 
 # Get tenant NSX-T Edge based on vDC group
 data "vcd_nsxt_edgegateway" "edge" {
-  org      = var.org_name
+  org      = var.vcd_org_name
   owner_id = data.vcd_vdc_group.vdc_group.id
-  name     = var.org_edge_name
+  name     = var.vcd_org_edge_name
 }
 
 # Maintaining IPSec VPN tunnels
 resource "vcd_nsxt_ipsec_vpn_tunnel" "tunnel1" {
-  org = var.org_name
+  org = var.vcd_org_name
 
   edge_gateway_id = data.vcd_nsxt_edgegateway.edge.id
   for_each = local.ipsec_vpn_tunnels
