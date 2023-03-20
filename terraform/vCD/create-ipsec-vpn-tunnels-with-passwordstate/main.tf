@@ -59,14 +59,14 @@ provider "vcd" {
 # Get vDC group
 data "vcd_vdc_group" "vdc_group" {
   org  = var.vcd_org_name
-  name = var.vcd_org_vdc_group
+  name = var.vcd_vdc_group
 }
 
 # Get tenant NSX-T Edge based on vDC group
 data "vcd_nsxt_edgegateway" "edge" {
   org      = var.vcd_org_name
   owner_id = data.vcd_vdc_group.vdc_group.id
-  name     = var.vcd_org_edge_name
+  name     = var.vcd_edge_name
 }
 
 # Maintaining IPSec VPN tunnels
