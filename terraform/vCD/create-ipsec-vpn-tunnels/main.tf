@@ -2,7 +2,7 @@
 variable "vcd_user" {}
 variable "vcd_pass" {}
 variable "vcd_allow_unverified_ssl" {
-    default = true
+    default = false
 }
 variable "vcd_url" {}
 variable "vcd_org_name" {}
