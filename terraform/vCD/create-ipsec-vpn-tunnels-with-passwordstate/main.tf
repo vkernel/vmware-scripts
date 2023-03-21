@@ -1,6 +1,6 @@
 # Declaring variables
 variable "vcd_allow_unverified_ssl" {
-    default = true
+    default = false
 }
 variable "vcd_url" {}
 variable "vcd_org_name" {}
@@ -13,6 +13,9 @@ variable "vcd_max_retry_timeout" {
 variable "vcd_passwordstate_password_id" {}
 variable "passwordstate_url" {}
 variable "passwordstate_api_key" {}
+variable "passwordstate_allow_unverified_ssl" {
+    default = false
+}
 
 terraform {
   required_providers {
@@ -25,6 +28,7 @@ terraform {
 
 # Passwordstate - Retrieve vCD svc credentials based on Passwordstate PasswordID
 data "http" "passwordstate_vcd_retrieve_password" {
+  insecure = var.passwordstate_allow_unverified_ssl
   url = "${var.passwordstate_url}/api/passwords/${var.vcd_passwordstate_password_id}"
   # Optional request headers
   request_headers = {
@@ -35,6 +39,7 @@ data "http" "passwordstate_vcd_retrieve_password" {
 # Passwordstate - Retrieve IPSec VPN Pre-Shared key based on Passwordstate PasswordID
 data "http" "passwordstate_ipsec_vpn_retrieve_password" {
   for_each = local.ipsec_vpn_tunnels
+  insecure = var.passwordstate_allow_unverified_ssl
   url = "${var.passwordstate_url}/api/passwords/${each.value.ipsec_vpn_password_id}"
   # Optional request headers
   request_headers = {
