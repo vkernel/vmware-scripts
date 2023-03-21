@@ -50,8 +50,8 @@ provider "vcd" {
   org      = var.vcd_org_name
   vdc      = var.vcd_org_vdc
 
-  max_retry_timeout    = "120"
-  allow_unverified_ssl = "true"
+  max_retry_timeout    = var.vcd_max_retry_timeout
+  allow_unverified_ssl = var.vcd_allow_unverified_ssl
 
   logging = "true"
 }
