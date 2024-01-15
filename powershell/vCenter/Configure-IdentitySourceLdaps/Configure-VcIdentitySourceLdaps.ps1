@@ -78,8 +78,7 @@ Function Configure-VcIdentitySourceLdaps {
             $tempBashFileDestination = "/tmp/bash.sh"
 
             # Connect to vCenter Server
-            Connect-VIServer -Server "vc01.infra.lan" -User $vcenter_username -Password $vcenter_password -ErrorAction Stop | Out-Null
-            #Connect-VIServer -Server $vcenter -User $vcenter_username -Password $vcenter_password -ErrorAction Stop | Out-Null
+            Connect-VIServer -Server $vcenter -User $vcenter_username -Password $vcenter_password -ErrorAction Stop | Out-Null
             Write-Log -Value "Successfully connected to $($vcenter)" -SuccessType -ErrorAction Stop
 
             # Query vCenter VM that matches FQDN as hostname
