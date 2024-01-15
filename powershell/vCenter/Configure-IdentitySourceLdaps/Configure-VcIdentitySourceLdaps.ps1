@@ -45,8 +45,8 @@ Function Write-Log {
         Out-File -InputObject "$date - ERROR: $Value" -FilePath $LogFile -Append -Encoding utf8
     }
     elseif ($SuccessType) {
-        Write-Host "$date - ERROR: $Value" -ForegroundColor Green
-        Out-File -InputObject "$date - ERROR: $Value" -FilePath $LogFile -Append -Encoding utf8
+        Write-Host "$date - SUCCESS: $Value" -ForegroundColor Green
+        Out-File -InputObject "$date - SUCCESS: $Value" -FilePath $LogFile -Append -Encoding utf8
     } else {
         Write-Host "$date - INFO: $Value" -ForegroundColor White
         Out-File -InputObject "$date - INFO: $Value"  -FilePath $LogFile -Append -Encoding utf8
@@ -153,7 +153,7 @@ Function Configure-VcIdentitySourceLdaps {
             }
 
             # Removing temporary bash file and ldaps.cer from source.
-            Write-Log -Value "Performing cleanup of temp files on source and destination"
+            Write-Log -Value "Performing cleanup of temp files on source and destination" 
             $tempBashFileSource | Remove-Item -Force -Confirm:$false
             $certFilePathSource | Remove-Item -Force -Confirm:$false
             $removeTempFiles = "rm $certFilePathDestination $tempBashFileDestination"
