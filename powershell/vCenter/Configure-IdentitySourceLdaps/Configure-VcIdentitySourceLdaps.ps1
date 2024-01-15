@@ -86,10 +86,7 @@ Function Configure-VcIdentitySourceLdaps {
         
             # Retrieve certificate from domain controller
             $getRootCert = "openssl s_client -connect $($primary_server_url -replace "ldaps://") -showcerts"
-            $getRootCert
-            $vCenterVM
-            $vcenter_root_password
-            $output = Invoke-VMScript -ScriptText $getRootCert -vm $vCenterVM -GuestUser "root" -GuestPassword $vcenter_root_password
+            $output = Invoke-VMScript -ScriptText $getRootCert -vm $vCenterVM -GuestUser "root" -GuestPassword $vcenter_root_password -ErrorAction Stop
 
             # Define the begin and end markers
             $beginMarker = "-----BEGIN CERTIFICATE-----"
