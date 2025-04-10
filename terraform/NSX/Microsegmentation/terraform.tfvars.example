@@ -1,0 +1,5 @@
+nsx_manager  = "nsx.example.com"
+nsx_username = "admin"
+nsx_password = "password"
+domain_id    = "default"
+site_id      = "default" 
