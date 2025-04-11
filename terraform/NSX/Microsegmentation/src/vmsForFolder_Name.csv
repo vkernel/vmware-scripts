@@ -1,0 +1,6 @@
+Name,Tenant,Environment,Application,Note
+db-01a,wld09,Production,Database Server,757.22 MB
+app-01a,wld09,Production,Application Server,754.47 MB
+web-01a,wld09,Production,Web Server,739.86 MB
+web-02a,wld09,Production,Web Server,740.98 MB
+web-03a,wld09,Production,Web Server,741.64 MB

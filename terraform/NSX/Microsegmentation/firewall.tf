@@ -23,7 +23,7 @@ resource "nsxt_policy_security_policy" "application_policies" {
         source_vm        = flow["Source VM"]
         destination_vm   = flow["Destination VM"]
         protocol         = flow.Protocol
-        port             = split(":", flow["Port Display"])[1]
+        port             = flow["Port Display"]
         action           = flow["firewall action"]
       } if contains(
         # Filter flows where either source or destination is part of this application
@@ -45,38 +45,36 @@ resource "nsxt_policy_security_policy" "application_policies" {
     
     content {
       display_name       = rule.value.name
-      source_groups      = [for vm in [rule.value.source_vm] : 
-                           nsxt_policy_group.app_groups[
-                             for pair in local.tenant_app_pairs : pair if contains(
-                               [for data in local.vm_csv_data : data.Name if data.Name == vm && 
-                                 "${data.Tenant}-${data.Application}" == pair
-                               ], vm
-                             )
-                           ][0].path if can(
-                             nsxt_policy_group.app_groups[
-                               for pair in local.tenant_app_pairs : pair if contains(
-                                 [for data in local.vm_csv_data : data.Name if data.Name == vm && 
-                                   "${data.Tenant}-${data.Application}" == pair
-                                 ], vm
-                               )
-                             ][0].path
-                           )]
-      destination_groups = [for vm in [rule.value.destination_vm] : 
-                           nsxt_policy_group.app_groups[
-                             for pair in local.tenant_app_pairs : pair if contains(
-                               [for data in local.vm_csv_data : data.Name if data.Name == vm && 
-                                 "${data.Tenant}-${data.Application}" == pair
-                               ], vm
-                             )
-                           ][0].path if can(
-                             nsxt_policy_group.app_groups[
-                               for pair in local.tenant_app_pairs : pair if contains(
-                                 [for data in local.vm_csv_data : data.Name if data.Name == vm && 
-                                   "${data.Tenant}-${data.Application}" == pair
-                                 ], vm
-                               )
-                             ][0].path
-                           )]
+      source_groups      = [
+        for vm in [rule.value.source_vm] : 
+        try(
+          [for pair in local.tenant_app_pairs : 
+            nsxt_policy_group.app_groups[pair].path
+            if contains(
+              [for data in local.vm_csv_data : data.Name 
+                if data.Name == vm && "${data.Tenant}-${data.Application}" == pair
+              ],
+              vm
+            )
+          ][0],
+          nsxt_policy_group.environment_groups["Production"].path
+        )
+      ]
+      destination_groups = [
+        for vm in [rule.value.destination_vm] : 
+        try(
+          [for pair in local.tenant_app_pairs : 
+            nsxt_policy_group.app_groups[pair].path
+            if contains(
+              [for data in local.vm_csv_data : data.Name 
+                if data.Name == vm && "${data.Tenant}-${data.Application}" == pair
+              ],
+              vm
+            )
+          ][0],
+          nsxt_policy_group.environment_groups["Production"].path
+        )
+      ]
       services           = [nsxt_policy_service.services["${rule.value.protocol}-${rule.value.port}"].path]
       action             = rule.value.action
       logged             = true
@@ -91,20 +89,23 @@ resource "nsxt_policy_security_policy" "application_policies" {
 # Create service entries for each protocol/port combination
 resource "nsxt_policy_service" "services" {
   for_each = {
-    for flow in local.flows_csv_data :
-    "${flow.Protocol}-${split(":", flow["Port Display"])[1]}" => {
-      protocol = flow.Protocol
-      port     = split(":", flow["Port Display"])[1]
+    for pair in distinct([
+      for flow in local.flows_csv_data :
+      "${flow.Protocol}-${flow["Port Display"]}"
+    ]) :
+    pair => {
+      protocol = split("-", pair)[0]
+      port     = split("-", pair)[1]
     }
   }
   
-  display_name = "${each.value.protocol}-${each.value.port}"
+  display_name = each.key
   description  = "Service for ${each.value.protocol} port ${each.value.port}"
   
   dynamic "l4_port_set_entry" {
     for_each = each.value.protocol == "TCP" || each.value.protocol == "UDP" ? [1] : []
     content {
-      display_name      = "${each.value.protocol}-${each.value.port}"
+      display_name      = each.key
       protocol          = each.value.protocol
       destination_ports = [each.value.port]
     }
@@ -114,7 +115,8 @@ resource "nsxt_policy_service" "services" {
     for_each = each.value.protocol == "ICMP" ? [1] : []
     content {
       display_name = "ICMP"
-      icmp_type    = "ICMPv4"
+      protocol    = "ICMPv4"
+      icmp_type   = "ICMPv4"
     }
   }
   

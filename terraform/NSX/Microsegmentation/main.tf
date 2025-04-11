@@ -21,7 +21,7 @@ provider "nsxt" {
 # Local variables for CSV data processing
 locals {
   # Parse VM data from CSV
-  vm_csv_data = csvdecode(file("${path.module}/src/vmsForVCenter_Name.csv"))
+  vm_csv_data = csvdecode(file("${path.module}/src/vmsForFolder_Name.csv"))
   
   # Create unique tenant-application pairs
   tenant_app_pairs = distinct([

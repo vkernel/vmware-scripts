@@ -1,11 +1,11 @@
-output "application_tags_created" {
-  description = "List of tenant-application tags created"
-  value       = [for tag in nsxt_policy_tag.tenant_app_tags : tag.tag]
+output "application_tags" {
+  description = "List of tenant-application tags"
+  value       = local.tenant_app_pairs
 }
 
-output "environment_tags_created" {
-  description = "List of environment tags created"
-  value       = [for tag in nsxt_policy_tag.environment_tags : tag.tag]
+output "environment_tags" {
+  description = "List of environment tags"
+  value       = local.environments
 }
 
 output "application_groups_created" {

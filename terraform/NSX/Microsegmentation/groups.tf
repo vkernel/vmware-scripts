@@ -18,7 +18,6 @@ resource "nsxt_policy_group" "app_groups" {
       member_type = "VirtualMachine"
       operator    = "EQUALS"
       value       = each.key
-      scope       = "application"
     }
   }
   
@@ -41,7 +40,6 @@ resource "nsxt_policy_group" "environment_groups" {
       member_type = "VirtualMachine"
       operator    = "EQUALS"
       value       = each.key
-      scope       = "environment"
     }
   }
   
