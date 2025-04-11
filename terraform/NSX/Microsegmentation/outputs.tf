@@ -19,8 +19,8 @@ output "environment_groups_created" {
 }
 
 output "application_policies_created" {
-  description = "List of application-specific security policies created"
-  value       = [for policy in nsxt_policy_security_policy.application_policies : policy.display_name]
+  description = "List of created application security policies"
+  value       = [nsxt_policy_security_policy.application_policy.display_name]
 }
 
 output "vm_count" {

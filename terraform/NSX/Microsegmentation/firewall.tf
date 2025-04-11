@@ -1,75 +1,58 @@
-# Create application-specific security policies
-resource "nsxt_policy_security_policy" "application_policies" {
-  for_each = {
-    for pair in local.tenant_app_pairs :
-    pair => {
-      tenant      = split("-", pair)[0]
-      application = split("-", pair)[1]
-    }
-  }
-  
-  display_name    = "Policy-${each.value.tenant}-${each.value.application}"
-  description     = "Security policy for ${each.value.tenant} ${each.value.application} application"
+# Create a single security policy for all applications
+resource "nsxt_policy_security_policy" "application_policy" {
+  display_name    = "Application Security Policy"
+  description     = "Security policy for all applications"
   domain          = var.domain_id
   category        = "Application"
   sequence_number = 8
   
-  # Process the flows to create firewall rules specific to this application
+  # Process the flows to create firewall rules
   dynamic "rule" {
     for_each = {
       for idx, flow in local.flows_csv_data :
       idx => {
-        name             = flow.name
-        source_vm        = flow["Source VM"]
-        destination_vm   = flow["Destination VM"]
-        protocol         = flow.Protocol
-        port             = flow["Port Display"]
-        action           = flow["firewall action"]
-      } if contains(
-        # Filter flows where either source or destination is part of this application
-        [
-          for vm in local.vm_csv_data : 
-          vm.Name if (vm.Name == flow["Source VM"] || vm.Name == flow["Destination VM"]) && 
-                     "${vm.Tenant}-${vm.Application}" == each.key
-        ],
-        flow["Source VM"]
-      ) || contains(
-        [
-          for vm in local.vm_csv_data : 
-          vm.Name if (vm.Name == flow["Source VM"] || vm.Name == flow["Destination VM"]) && 
-                     "${vm.Tenant}-${vm.Application}" == each.key
-        ],
-        flow["Destination VM"]
-      )
+        source_app      = try(
+          [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Source VM"]][0],
+          "External"
+        )
+        dest_app        = try(
+          [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Destination VM"]][0],
+          "External"
+        )
+        source_vm      = flow["Source VM"]
+        destination_vm = flow["Destination VM"]
+        protocol       = flow.Protocol
+        port           = flow["Port Display"]
+        action         = flow["firewall action"]
+      }
     }
     
     content {
-      display_name       = rule.value.name
+      display_name       = "${rule.value.source_app} to ${rule.value.dest_app} [${rule.value.protocol}-${rule.value.port}]"
+      description        = "Allow communication from ${rule.value.source_app} to ${rule.value.dest_app} on ${rule.value.protocol} port ${rule.value.port}"
       source_groups      = [
-        for vm in [rule.value.source_vm] : 
         try(
           [for pair in local.tenant_app_pairs : 
             nsxt_policy_group.app_groups[pair].path
             if contains(
               [for data in local.vm_csv_data : data.Name 
-                if data.Name == vm && "${data.Tenant}-${data.Application}" == pair
+                if data.Name == rule.value.source_vm && "${data.Tenant}-${data.Application}" == pair
               ],
-              vm
+              rule.value.source_vm
             )
           ][0],
           nsxt_policy_group.environment_groups["Production"].path
         )
       ]
       destination_groups = [
-        for vm in [rule.value.destination_vm] : 
         try(
           [for pair in local.tenant_app_pairs : 
             nsxt_policy_group.app_groups[pair].path
             if contains(
               [for data in local.vm_csv_data : data.Name 
-                if data.Name == vm && "${data.Tenant}-${data.Application}" == pair
+                if data.Name == rule.value.destination_vm && "${data.Tenant}-${data.Application}" == pair
               ],
-              vm
+              rule.value.destination_vm
             )
           ][0],
           nsxt_policy_group.environment_groups["Production"].path
