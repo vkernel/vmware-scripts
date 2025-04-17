@@ -18,32 +18,57 @@ provider "nsxt" {
   retry_max_delay      = 5000
 }
 
-# Local variables for CSV data processing
+# Local variables for YAML data processing
 locals {
-  # Parse VM data from CSV
-  vm_csv_data = csvdecode(file("${path.module}/src/vmsForFolder_Name.csv"))
+  # Parse VM data from YAML
+  vm_yaml_data = yamldecode(file("${path.module}/src/VMs.yaml"))
+  
+  # Extract tenant from the YAML (only one tenant - "wld09" in the example)
+  tenant = keys(local.vm_yaml_data)[0]
+  
+  # Create a flattened map of environments and application tiers (excluding allowed_communications)
+  env_apps = {
+    for k, v in local.vm_yaml_data[local.tenant] : 
+    k => v if k != "allowed_communications"
+  }
+  
+  # Create a flat map of VMs with their metadata
+  vms_with_tags = merge([
+    for env_name, env_data in local.env_apps : 
+      merge([
+        for app_name, vms in env_data : 
+          { for vm_name in vms : 
+            vm_name => {
+              tenant      = local.tenant
+              environment = env_name
+              application = app_name
+              name        = vm_name
+            }
+          }
+      ]...)
+  ]...)
+  
+  # Create a list of VM objects compatible with the original csv format
+  vm_csv_data = [
+    for vm_name, vm_data in local.vms_with_tags : {
+      Name        = vm_name
+      Tenant      = vm_data.tenant
+      Environment = vm_data.environment
+      Application = vm_data.application
+    }
+  ]
   
   # Create unique tenant-application pairs
   tenant_app_pairs = distinct([
-    for vm in local.vm_csv_data : 
-    "${vm.Tenant}-${vm.Application}" if vm.Tenant != "" && vm.Application != ""
+    for vm_name, vm_data in local.vms_with_tags : 
+    "${vm_data.tenant}-${vm_data.application}"
   ])
   
   # Create unique environments
   environments = distinct([
-    for vm in local.vm_csv_data : 
-    vm.Environment if vm.Environment != ""
+    for vm_name, vm_data in local.vms_with_tags : 
+    vm_data.environment
   ])
-  
-  # Create a map of VMs with their tags
-  vms_with_tags = {
-    for vm in local.vm_csv_data :
-    vm.Name => {
-      tenant      = vm.Tenant
-      environment = vm.Environment
-      application = vm.Application
-    } if vm.Name != "" && vm.Tenant != ""
-  }
   
   # Parse flows from CSV
   flows_csv_data = csvdecode(file("${path.module}/src/flows.csv"))
