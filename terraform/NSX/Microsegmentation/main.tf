@@ -90,4 +90,32 @@ locals {
   
   # Parse flows from CSV
   flows_csv_data = csvdecode(file("${path.module}/src/flows.csv"))
+  
+  # Process the CSV data to identify unique flow combinations
+  unique_flow_combinations = distinct([
+    for flow in local.flows_csv_data :
+    join(":", [
+      try(
+        [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Source VM"]][0],
+        "External"
+      ),
+      try(
+        [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Destination VM"]][0],
+        "External"
+      ),
+      flow.Protocol,
+      flow["Port Display"]
+    ]) if flow["firewall action"] == "ALLOW"
+  ])
+  
+  # Create the unique firewall rules based on the unique combinations
+  unique_firewall_rules = {
+    for combination in local.unique_flow_combinations :
+    combination => {
+      source_app     = split(":", combination)[0]
+      dest_app       = split(":", combination)[1]
+      protocol       = split(":", combination)[2]
+      port           = split(":", combination)[3]
+    }
+  }
 } 

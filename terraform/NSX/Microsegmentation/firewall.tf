@@ -6,55 +6,22 @@ resource "nsxt_policy_security_policy" "application_policy" {
   category        = "Application"
   sequence_number = 8
   
-  # Process the flows to create firewall rules
+  # Process the flows to create firewall rules - using the deduplicated rules
   dynamic "rule" {
-    for_each = {
-      for idx, flow in local.flows_csv_data :
-      idx => {
-        source_app      = try(
-          [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Source VM"]][0],
-          "External"
-        )
-        dest_app        = try(
-          [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Destination VM"]][0],
-          "External"
-        )
-        source_vm      = flow["Source VM"]
-        destination_vm = flow["Destination VM"]
-        protocol       = flow.Protocol
-        port           = flow["Port Display"]
-        action         = flow["firewall action"]
-      } if flow["firewall action"] == "ALLOW"  # Only include ALLOW rules
-    }
+    for_each = local.unique_firewall_rules
     
     content {
       display_name       = "${rule.value.source_app} to ${rule.value.dest_app} [${rule.value.protocol}-${rule.value.port}]"
       description        = "Allow communication from ${rule.value.source_app} to ${rule.value.dest_app} on ${rule.value.protocol} port ${rule.value.port}"
       source_groups      = [
         try(
-          [for pair in local.tenant_app_pairs : 
-            nsxt_policy_group.app_groups[pair].path
-            if contains(
-              [for data in local.vm_csv_data : data.Name 
-                if data.Name == rule.value.source_vm && "${data.Tenant}-${data.Application}" == pair
-              ],
-              rule.value.source_vm
-            )
-          ][0],
+          nsxt_policy_group.app_groups[rule.value.source_app].path,
           nsxt_policy_group.environment_groups["Production"].path
         )
       ]
       destination_groups = [
         try(
-          [for pair in local.tenant_app_pairs : 
-            nsxt_policy_group.app_groups[pair].path
-            if contains(
-              [for data in local.vm_csv_data : data.Name 
-                if data.Name == rule.value.destination_vm && "${data.Tenant}-${data.Application}" == pair
-              ],
-              rule.value.destination_vm
-            )
-          ][0],
+          nsxt_policy_group.app_groups[rule.value.dest_app].path,
           nsxt_policy_group.environment_groups["Production"].path
         )
       ]
