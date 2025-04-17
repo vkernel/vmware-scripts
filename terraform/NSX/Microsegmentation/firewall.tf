@@ -24,7 +24,7 @@ resource "nsxt_policy_security_policy" "application_policy" {
         protocol       = flow.Protocol
         port           = flow["Port Display"]
         action         = flow["firewall action"]
-      }
+      } if flow["firewall action"] == "ALLOW"  # Only include ALLOW rules
     }
     
     content {
@@ -59,9 +59,17 @@ resource "nsxt_policy_security_policy" "application_policy" {
         )
       ]
       services           = [nsxt_policy_service.services["${rule.value.protocol}-${rule.value.port}"].path]
-      action             = rule.value.action
+      action             = "ALLOW"  # Always ALLOW for these rules
       logged             = true
     }
+  }
+  
+  # Final rule to deny all other application traffic
+  rule {
+    display_name = "Deny All Other Application Traffic"
+    description  = "Deny all other traffic between applications"
+    action       = "DROP"
+    logged       = true
   }
   
   lifecycle {
@@ -111,35 +119,32 @@ resource "nsxt_policy_service" "services" {
 # Create environment isolation policy
 resource "nsxt_policy_security_policy" "environment_isolation" {
   display_name = "Environment Isolation Policy"
-  description  = "Security policy to isolate OTAP environments"
+  description  = "Security policy to isolate environments based on allowed_communications"
   domain       = var.domain_id
   category     = "Environment"
   
   # Higher sequence number than application policies
   sequence_number = 10
   
+  # Allow rules for explicitly permitted environment communications
   dynamic "rule" {
-    for_each = {
-      for idx, env1 in local.environments :
-      idx => {
-        env = env1
-      }
-    }
+    for_each = local.allowed_env_pairs
     
     content {
-      display_name       = "Block ${rule.value.env} to other environments"
-      source_groups      = [nsxt_policy_group.environment_groups[rule.value.env].path]
-      destination_groups = [for env in local.environments : 
-                           nsxt_policy_group.environment_groups[env].path if env != rule.value.env]
-      action             = "REJECT"
+      display_name       = "Allow ${rule.value.source} to ${rule.value.target}"
+      description        = "Allow communication from ${rule.value.source} to ${rule.value.target} as specified in allowed_communications"
+      source_groups      = [nsxt_policy_group.environment_groups[rule.value.source].path]
+      destination_groups = [nsxt_policy_group.environment_groups[rule.value.target].path]
+      action             = "ALLOW"
       logged             = true
     }
   }
   
-  # Default rule to allow intra-environment communication
+  # Final rule to deny all other traffic between environments
   rule {
-    display_name = "Allow same environment communication"
-    action       = "ALLOW"
+    display_name = "Deny All Other Environment Traffic"
+    description  = "Deny all other traffic between environments"
+    action       = "DROP"
     logged       = true
   }
   

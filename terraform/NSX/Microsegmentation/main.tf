@@ -26,6 +26,9 @@ locals {
   # Extract tenant from the YAML (only one tenant - "wld09" in the example)
   tenant = keys(local.vm_yaml_data)[0]
   
+  # Extract allowed communications between environments
+  allowed_communications = try(local.vm_yaml_data[local.tenant].allowed_communications, {})
+  
   # Create a flattened map of environments and application tiers (excluding allowed_communications)
   env_apps = {
     for k, v in local.vm_yaml_data[local.tenant] : 
@@ -69,6 +72,21 @@ locals {
     for vm_name, vm_data in local.vms_with_tags : 
     vm_data.environment
   ])
+  
+  # Create environment pairs that are allowed to communicate (handling empty arrays)
+  allowed_env_pairs = flatten([
+    for source_env, target_envs in local.allowed_communications : [
+      for target_env in coalesce(target_envs, []) : {
+        source = source_env
+        target = target_env
+      } if target_env != null
+    ]
+  ])
+  
+  # Create a map to easily check if communication is allowed between environments
+  allowed_env_map = {
+    for pair in local.allowed_env_pairs : "${pair.source}-${pair.target}" => true
+  }
   
   # Parse flows from CSV
   flows_csv_data = csvdecode(file("${path.module}/src/flows.csv"))
