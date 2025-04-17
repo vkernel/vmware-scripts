@@ -140,12 +140,25 @@ resource "nsxt_policy_security_policy" "environment_isolation" {
     }
   }
   
-  # Final rule to deny all other traffic between environments
-  rule {
-    display_name = "Deny All Other Environment Traffic"
-    description  = "Deny all other traffic between environments"
-    action       = "DROP"
-    logged       = true
+  # Block rules for environments with defined allowed_communications
+  dynamic "rule" {
+    for_each = {
+      for env_name, allowed_list in local.allowed_communications : 
+      env_name => allowed_list if length(keys(local.allowed_communications)) > 0
+    }
+    
+    content {
+      display_name       = "Block ${rule.key} to unauthorized environments"
+      description        = "Block communication from ${rule.key} to environments not in its allowed list"
+      source_groups      = [nsxt_policy_group.environment_groups[rule.key].path]
+      destination_groups = [
+        for env in local.environments : 
+          nsxt_policy_group.environment_groups[env].path 
+          if env != rule.key && !contains(coalesce(rule.value, []), env)
+      ]
+      action             = "DROP"
+      logged             = true
+    }
   }
   
   lifecycle {
