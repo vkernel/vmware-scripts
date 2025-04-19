@@ -15,14 +15,26 @@ resource "nsxt_policy_security_policy" "application_policy" {
       description        = "Allow communication from ${rule.value.source_app} to ${rule.value.dest_app} on ${rule.value.protocol} port ${rule.value.port}"
       source_groups      = [
         try(
+          # Try app_groups first for application tiers
           nsxt_policy_group.app_groups[rule.value.source_app].path,
-          nsxt_policy_group.environment_groups["Production"].path
+          # Then try external_groups for external entities
+          try(
+            nsxt_policy_group.external_groups[rule.value.source_app].path,
+            # Default to production environment if not found
+            nsxt_policy_group.environment_groups["Production"].path
+          )
         )
       ]
       destination_groups = [
         try(
+          # Try app_groups first for application tiers
           nsxt_policy_group.app_groups[rule.value.dest_app].path,
-          nsxt_policy_group.environment_groups["Production"].path
+          # Then try external_groups for external entities
+          try(
+            nsxt_policy_group.external_groups[rule.value.dest_app].path,
+            # Default to production environment if not found
+            nsxt_policy_group.environment_groups["Production"].path
+          )
         )
       ]
       services           = [nsxt_policy_service.services["${rule.value.protocol}-${rule.value.port}"].path]
@@ -47,10 +59,14 @@ resource "nsxt_policy_security_policy" "application_policy" {
 # Create service entries for each protocol/port combination
 resource "nsxt_policy_service" "services" {
   for_each = {
-    for pair in distinct([
-      for flow in local.flows_csv_data :
-      "${flow.Protocol}-${flow["Port Display"]}"
-    ]) :
+    for pair in distinct(flatten([
+      for tenant, rules in local.allowed_flows_yaml : [
+        for rule in rules : [
+          for port in rule.ports : 
+          "${upper(rule.protocol)}-${port}"
+        ]
+      ]
+    ])) :
     pair => {
       protocol = split("-", pair)[0]
       port     = split("-", pair)[1]

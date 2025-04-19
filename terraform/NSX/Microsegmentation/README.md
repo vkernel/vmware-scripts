@@ -15,8 +15,8 @@ This project implements NSX microsegmentation using Terraform for NSX 4.2.1.3.
 
 - Terraform 1.0.0 or newer
 - NSX 4.2.1.3
-- VM data in CSV format
-- Flow data in CSV format
+- VM data in YAML format
+- Flow data in YAML format
 
 ## Usage
 
@@ -37,8 +37,8 @@ This project implements NSX microsegmentation using Terraform for NSX 4.2.1.3.
 
 ## Input Files
 
-- `src/vmsForVCenter_Name.csv` - VM data with tenant, environment, and application information
-- `src/flows.csv` - Flow data exported from Aria Operations for Networks
+- `src/VMs.yaml` - VM data with tenant, environment, and application information
+- `src/allowed_flows.yaml` - Flow data defining allowed communications between application groups
 
 ## Structure
 
@@ -63,8 +63,8 @@ This project implements NSX microsegmentation using Terraform for NSX 4.2.1.3.
 2. Generate tags based on the output if they don't exist yet.
 3. Assign VM tags in NSX based on the output
 4. Create new groups based on tags using the output
-5. Download known flows for each application group.
-6. Generate application-specific firewall policies based on the flows
+5. Define allowed flows between application groups in the YAML configuration
+6. Generate application-specific firewall policies based on the allowed flows
 
 Stappen
 
@@ -72,8 +72,8 @@ Stappen
 2. Op basis van output genereer tags als die nog niet bestaan.
 3. Op basis van output assign VM tags in NSX
 4. Op basis van output maak nieuwe groepen aan op basis van tags
-5. Download van de application groep de bekende flows.
-6.
+5. Definieer toegestane communicatie tussen applicatiegroepen in de YAML-configuratie
+6. Genereer applicatie-specifieke firewall policies op basis van de toegestane flows
 
 Tijdelijke changes die gemaakt zijn
 

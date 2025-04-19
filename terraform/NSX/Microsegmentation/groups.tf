@@ -46,4 +46,6 @@ resource "nsxt_policy_group" "environment_groups" {
   lifecycle {
     create_before_destroy = true
   }
-} 
+}
+
+# Create groups for external entities (DNS, Jumphost, NTP, etc.) is now in external_groups.tf 

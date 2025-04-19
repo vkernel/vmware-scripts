@@ -5,6 +5,7 @@ wld09:
     destination: Web Server
     ports:
       - 443
+      - 22
     protocol: tcp
 
   - source: Web Server

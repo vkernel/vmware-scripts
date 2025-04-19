@@ -95,25 +95,36 @@ locals {
     for pair in local.allowed_env_pairs : "${pair.source}-${pair.target}" => true
   }
   
-  # Parse flows from CSV
-  flows_csv_data = csvdecode(file("${path.module}/src/flows.csv"))
+  # Parse flows from YAML instead of CSV
+  allowed_flows_yaml = yamldecode(file("${path.module}/src/allowed_flows.yaml"))
   
-  # Process the CSV data to identify unique flow combinations
-  unique_flow_combinations = distinct([
-    for flow in local.flows_csv_data :
-    join(":", [
-      try(
-        [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Source VM"]][0],
-        "External"
-      ),
-      try(
-        [for vm in local.vm_csv_data : "${vm.Tenant}-${vm.Application}" if vm.Name == flow["Destination VM"]][0],
-        "External"
-      ),
-      flow.Protocol,
-      flow["Port Display"]
-    ]) if flow["firewall action"] == "ALLOW"
-  ])
+  # Map application names to their tenant-application format used in app_groups
+  app_name_to_tag_map = merge([
+    for env_name, env_data in local.env_apps : {
+      for app_name, _ in env_data :
+        app_name => "${local.tenant}-${app_name}"
+    }
+  ]...)
+  
+  # Process the YAML data to identify unique flow combinations
+  unique_flow_combinations = distinct(flatten([
+    for tenant, rules in local.allowed_flows_yaml : [
+      for rule in rules : [
+        for port in rule.ports : [
+          for src in try(tolist(rule.source), [rule.source]) : [
+            for dst in try(tolist(rule.destination), [rule.destination]) : 
+              join(":", [
+                # Use the tenant-application tag format for app groups
+                try(local.app_name_to_tag_map[src], src),
+                try(local.app_name_to_tag_map[dst], dst),
+                upper(rule.protocol),
+                tostring(port)
+              ])
+          ]
+        ]
+      ]
+    ]
+  ]))
   
   # Create the unique firewall rules based on the unique combinations
   unique_firewall_rules = {
