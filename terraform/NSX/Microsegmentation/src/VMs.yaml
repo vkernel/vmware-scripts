@@ -22,3 +22,10 @@ wld09:
       - t-web-01a
       - t-web-02a
       - t-web-03a
+  External:
+    DNS:
+      - 192.168.12.10
+    NTP:
+      - 192.168.12.1
+    Jumphost:
+      - 10.10.89.11
