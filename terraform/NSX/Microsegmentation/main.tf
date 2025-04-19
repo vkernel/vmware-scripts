@@ -26,6 +26,10 @@ locals {
       for k, v in tenant_data : k => v if k != "External"
     }
   }
+
+  # Parse External section from YAML
+  external_entries = yamldecode(file("${path.module}/src/VMs.yaml"))[local.tenant].External
+
   # Extract tenant from the YAML (only one tenant - "wld09" in the example)
   tenant = keys(local.vm_yaml_data)[0]
   

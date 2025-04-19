@@ -8,8 +8,8 @@ resource "nsxt_policy_group" "app_groups" {
     }
   }
   
-  display_name = "app-${each.value.tenant}-${each.value.application}"
-  description  = "Group for ${each.value.tenant} ${each.value.application} application"
+  display_name = "app-${local.tenant}-${each.value.application}"
+  description  = "Group for ${local.tenant} ${each.value.application} application"
   domain       = var.domain_id
   
   criteria {
@@ -30,7 +30,7 @@ resource "nsxt_policy_group" "app_groups" {
 resource "nsxt_policy_group" "environment_groups" {
   for_each = toset(local.environments)
   
-  display_name = "env-${each.key}"
+  display_name = "env-${local.tenant}-${each.key}"
   description  = "Group for ${each.key} environment"
   domain       = var.domain_id
   
