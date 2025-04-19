@@ -1,81 +1,108 @@
-# NSX Microsegmentation with Terraform
+# NSX Microsegmentation Terraform
 
-This project implements NSX microsegmentation using Terraform for NSX 4.2.1.3.
+This Terraform project automates the implementation of microsegmentation policies in VMware NSX-T environments. It creates security policies, groups, and firewall rules based on application components and communication patterns defined in YAML configuration files.
 
 ## Features
 
-- Creates NSX tags based on tenant-application pairs from VM data
-- Creates environment tags
-- Assigns appropriate tags to VMs
-- Creates NSX groups based on tags
-- Implements per-application firewall policies based on flows
-- Implements environment isolation (OTAP) rules
+- YAML-based configuration of virtual machines, applications, and environments
+- Dynamic generation of NSX-T groups based on VM tags and application tiers
+- Automatic creation of security policies and firewall rules from allowed flows definitions
+- Environment isolation with configurable inter-environment communications
+- Support for external entity definitions (e.g., DNS, NTP services)
 
 ## Prerequisites
 
 - Terraform 1.0.0 or newer
-- NSX 4.2.1.3
-- VM data in YAML format
-- Flow data in YAML format
+- NSX-T 3.0 or newer
+- NSX-T Manager with appropriate credentials
+
+## Configuration Files
+
+The project uses the following YAML files for configuration:
+
+- `src/VMs.yaml`: Defines VMs organized by tenant, environment, and application tier
+- `src/allowed_flows.yaml`: Defines allowed communications between application tiers
+
+### VMs.yaml Structure
+
+```yaml
+tenant:
+  allowed_communications:  # Optional section to define environment communications
+    Environment1:
+      - Environment2
+  Environment1:
+    ApplicationTier1:
+      - vm-name-1
+      - vm-name-2
+    ApplicationTier2:
+      - vm-name-3
+  Environment2:
+    ApplicationTier1:
+      - vm-name-4
+  External:  # Optional section to define external IP addresses or services
+    Service1:
+      - ip-address-1
+```
+
+### allowed_flows.yaml Structure
+
+```yaml
+tenant:
+  - source: ApplicationTier1
+    destination: ApplicationTier2
+    ports:
+      - 80
+      - 443
+    protocol: tcp
+  
+  - source: 
+      - ApplicationTier1
+      - ApplicationTier2
+    destination: ExternalService
+    ports:
+      - 53
+    protocol: udp
+```
 
 ## Usage
 
-1. Clone this repository
-2. Copy `terraform.tfvars.example` to `terraform.tfvars` and update the values
-3. Initialize Terraform:
-   ```
-   terraform init
-   ```
-4. Plan the deployment:
-   ```
-   terraform plan
-   ```
-5. Apply the configuration:
-   ```
-   terraform apply
-   ```
+1. Configure your NSX-T connection parameters in `terraform.tfvars`:
 
-## Input Files
+```hcl
+nsx_manager  = "nsx.example.com"
+nsx_username = "admin"
+nsx_password = "password"
+```
 
-- `src/VMs.yaml` - VM data with tenant, environment, and application information
-- `src/allowed_flows.yaml` - Flow data defining allowed communications between application groups
+2. Define your virtual machines and applications in `src/VMs.yaml`
 
-## Structure
+3. Define allowed communications in `src/allowed_flows.yaml`
 
-- `main.tf` - Main Terraform configuration
-- `variables.tf` - Variable definitions
-- `terraform.tfvars` - Variable values (create from example)
-- `tags.tf` - NSX tag definitions
-- `vm_tags.tf` - VM tag assignments
-- `groups.tf` - NSX group definitions
-- `firewall.tf` - Application-specific firewall policies and rules
+4. Initialize and apply the Terraform configuration:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+## Resources Created
+
+This Terraform configuration creates:
+
+- NSX-T groups for environments, application tiers, and external entities
+- VM tags for microsegmentation
+- Security policies for application communications
+- Environment isolation policies
+- Custom services for protocol/port combinations
+- Firewall rules based on allowed flows
+
+## Outputs
+
+The project provides outputs for the created resources, making it easier to reference them in other configurations or for documentation purposes.
 
 ## Notes
 
-- The tenant-application tags are named as `tenant-application`
-- The NSX groups are named as `app-tenant-application`
-- Each application has its own dedicated firewall policy named `Policy-tenant-application`
-- Environment isolation ensures OTAP environments are isolated from each other
-
-## Implementation Steps
-
-1. Identify applications within a vCenter of a specific WLD (Tenant = WLD, Application, and OTAP) based on a VM list export from vCenter. (vCenter --> VMs --> Export --> All rows)
-2. Generate tags based on the output if they don't exist yet.
-3. Assign VM tags in NSX based on the output
-4. Create new groups based on tags using the output
-5. Define allowed flows between application groups in the YAML configuration
-6. Generate application-specific firewall policies based on the allowed flows
-
-Stappen
-
-1. Identificeer applicaties binnen een vCenter van een specifieke WLD (Tenant = WLD, Applicatie, en OTAP) op basis van een export van een VM lijst binnen vCenter. (vCenter --> VMs --> Export --> All rows)
-2. Op basis van output genereer tags als die nog niet bestaan.
-3. Op basis van output assign VM tags in NSX
-4. Op basis van output maak nieuwe groepen aan op basis van tags
-5. Definieer toegestane communicatie tussen applicatiegroepen in de YAML-configuratie
-6. Genereer applicatie-specifieke firewall policies op basis van de toegestane flows
-
-Tijdelijke changes die gemaakt zijn
-
-1. Op de shared NSX omgeving heb ik LMBB-AZS-PRTG aan de wld09 tag toegevoegd.
-2. application group aangemakt voor CTDH.
+- The configuration supports a single tenant structure
+- All security policies have logging enabled by default
+- The default action for undefined traffic is to drop (deny) 
