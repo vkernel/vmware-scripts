@@ -20,9 +20,12 @@ provider "nsxt" {
 
 # Local variables for YAML data processing
 locals {
-  # Parse VM data from YAML
-  vm_yaml_data = yamldecode(file("${path.module}/src/VMs.yaml"))
-  
+  # Parse VM data from YAML and exclude external key
+  vm_yaml_data = {
+    for tenant, tenant_data in yamldecode(file("${path.module}/src/VMs.yaml")) : tenant => {
+      for k, v in tenant_data : k => v if k != "External"
+    }
+  }
   # Extract tenant from the YAML (only one tenant - "wld09" in the example)
   tenant = keys(local.vm_yaml_data)[0]
   
