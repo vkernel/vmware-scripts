@@ -1,6 +1,6 @@
 # Create a single security policy for all applications
 resource "nsxt_policy_security_policy" "application_policy" {
-  display_name    = "Application Security Policy"
+  display_name    = "${local.tenant}-Application Security Policy"
   description     = "Security policy for all applications"
   domain          = var.domain_id
   category        = "Application"
@@ -119,27 +119,6 @@ resource "nsxt_policy_security_policy" "environment_isolation" {
       source_groups      = [nsxt_policy_group.environment_groups[rule.value.source].path]
       destination_groups = [nsxt_policy_group.environment_groups[rule.value.target].path]
       action             = "ALLOW"
-      logged             = true
-    }
-  }
-  
-  # Block rules for environments with defined allowed_communications
-  dynamic "rule" {
-    for_each = {
-      for env_name, allowed_list in local.allowed_communications : 
-      env_name => allowed_list if length(keys(local.allowed_communications)) > 0
-    }
-    
-    content {
-      display_name       = "Block ${rule.key} to unauthorized environments"
-      description        = "Block communication from ${rule.key} to environments not in its allowed list"
-      source_groups      = [nsxt_policy_group.environment_groups[rule.key].path]
-      destination_groups = [
-        for env in local.environments : 
-          nsxt_policy_group.environment_groups[env].path 
-          if env != rule.key && !contains(coalesce(rule.value, []), env)
-      ]
-      action             = "DROP"
       logged             = true
     }
   }

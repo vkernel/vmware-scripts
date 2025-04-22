@@ -6,6 +6,8 @@ wld09:
     ports:
       - 443
       - 22
+    services:
+      - ICMP
     protocol: tcp
 
   - source: Web Server
