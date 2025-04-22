@@ -22,22 +22,25 @@ provider "nsxt" {
 locals {
   # Parse VM data from YAML and exclude external key
   vm_yaml_data = {
-    for tenant, tenant_data in yamldecode(file("${path.module}/src/VMs.yaml")) : tenant => {
+    for tenant, tenant_data in yamldecode(file("${path.module}/src/dfw_groups.yaml")) : tenant => {
       for k, v in tenant_data : k => v if k != "External"
     }
   }
 
   # Parse External section from YAML
-  external_entries = yamldecode(file("${path.module}/src/VMs.yaml"))[local.tenant].External
+  external_entries = yamldecode(file("${path.module}/src/dfw_groups.yaml"))[local.tenant].External
 
   # Extract tenant from the YAML (only one tenant - "wld09" in the example)
   tenant = keys(local.vm_yaml_data)[0]
   
+  # Parse the entire allowed flows YAML 
+  allowed_flows_full = yamldecode(file("${path.module}/src/dfw_allowed_flows.yaml"))
+  
   # Extract allowed communications between environments
-  allowed_communications = try(local.vm_yaml_data[local.tenant].allowed_communications, {})
+  allowed_communications = try(local.allowed_flows_full[local.tenant].environment_policy.allowed_communications, {})
   
   # Extract blocked communications between environments
-  blocked_communications = try(local.vm_yaml_data[local.tenant].blocked_communications, {})
+  blocked_communications = try(local.allowed_flows_full[local.tenant].environment_policy.blocked_communications, {})
   
   # Create a flattened map of environments and application tiers (excluding allowed_communications)
   env_apps = {
@@ -113,8 +116,8 @@ locals {
     for pair in local.blocked_env_pairs : "${pair.source}-${pair.target}" => true
   }
   
-  # Parse flows from YAML instead of CSV
-  allowed_flows_yaml = yamldecode(file("${path.module}/src/allowed_flows.yaml"))
+  # Extract application policy from YAML
+  allowed_flows_yaml = try(local.allowed_flows_full[local.tenant].application_policy, [])
   
   # Map application names to their tenant-application format used in app_groups
   app_name_to_tag_map = merge([
@@ -126,19 +129,17 @@ locals {
   
   # Process the YAML data to identify unique flow combinations
   unique_flow_combinations = distinct(flatten([
-    for tenant, rules in local.allowed_flows_yaml : [
-      for rule in rules : [
-        for port in rule.ports : [
-          for src in try(tolist(rule.source), [rule.source]) : [
-            for dst in try(tolist(rule.destination), [rule.destination]) : 
-              join(":", [
-                # Use the tenant-application tag format for app groups
-                try(local.app_name_to_tag_map[src], src),
-                try(local.app_name_to_tag_map[dst], dst),
-                upper(rule.protocol),
-                tostring(port)
-              ])
-          ]
+    for rule in local.allowed_flows_yaml : [
+      for port in rule.ports : [
+        for src in try(tolist(rule.source), [rule.source]) : [
+          for dst in try(tolist(rule.destination), [rule.destination]) : 
+            join(":", [
+              # Use the tenant-application tag format for app groups
+              try(local.app_name_to_tag_map[src], src),
+              try(local.app_name_to_tag_map[dst], dst),
+              upper(rule.protocol),
+              tostring(port)
+            ])
         ]
       ]
     ]

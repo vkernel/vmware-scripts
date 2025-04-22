@@ -1,6 +1,6 @@
 # Create a single security policy for all applications
 resource "nsxt_policy_security_policy" "application_policy" {
-  display_name    = "${local.tenant}-Application Security Policy"
+  display_name    = "${local.tenant} Application Security Policy"
   description     = "Security policy for all applications"
   domain          = var.domain_id
   category        = "Application"
@@ -60,12 +60,12 @@ resource "nsxt_policy_security_policy" "application_policy" {
 resource "nsxt_policy_service" "services" {
   for_each = {
     for pair in distinct(flatten([
-      for tenant, rules in local.allowed_flows_yaml : [
-        for rule in rules : [
-          for port in rule.ports : 
-          "${upper(rule.protocol)}-${port}"
-        ]
-      ]
+      for rule in local.allowed_flows_yaml : flatten([
+        # Process normal ports
+        [for port in rule.ports : "${upper(rule.protocol)}-${port}"],
+        # Process services if they exist (like ICMP)
+        try([for service in rule.services : "${upper(service)}-0"], [])
+      ])
     ])) :
     pair => {
       protocol = split("-", pair)[0]
@@ -90,7 +90,6 @@ resource "nsxt_policy_service" "services" {
     content {
       display_name = "ICMP"
       protocol    = "ICMPv4"
-      icmp_type   = "ICMPv4"
     }
   }
   
@@ -101,7 +100,7 @@ resource "nsxt_policy_service" "services" {
 
 # Create environment isolation policy
 resource "nsxt_policy_security_policy" "environment_isolation" {
-  display_name = "Environment Isolation Policy"
+  display_name = "${local.tenant} Environment Isolation Policy"
   description  = "Security policy to isolate environments based on allowed_communications and blocked_communications"
   domain       = var.domain_id
   category     = "Environment"

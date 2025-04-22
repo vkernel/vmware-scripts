@@ -1,13 +1,8 @@
+---
 wld09:
-  allowed_communications:
-    Production:
-      - Test
-  blocked_communications:
-    Test:
-      - Production
-  Production:
-    Database Server:
-      - p-db-01a
+  Production:           ##Environment 
+    Database Server:    ##Application Type
+      - p-db-01a        ##VM name 
     Application Server:
       - p-app-01a
     Web Server:
