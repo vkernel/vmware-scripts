@@ -2,6 +2,7 @@ wld09:
   allowed_communications:
     Production:
       - Test
+  blocked_communications:
     Test:
       - Production
   Production:

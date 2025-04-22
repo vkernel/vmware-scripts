@@ -36,10 +36,13 @@ locals {
   # Extract allowed communications between environments
   allowed_communications = try(local.vm_yaml_data[local.tenant].allowed_communications, {})
   
+  # Extract blocked communications between environments
+  blocked_communications = try(local.vm_yaml_data[local.tenant].blocked_communications, {})
+  
   # Create a flattened map of environments and application tiers (excluding allowed_communications)
   env_apps = {
     for k, v in local.vm_yaml_data[local.tenant] : 
-    k => v if k != "allowed_communications"
+    k => v if k != "allowed_communications" && k != "blocked_communications"
   }
   
   # Create a flat map of VMs with their metadata
@@ -90,9 +93,24 @@ locals {
     ]
   ])
   
+  # Create environment pairs that are blocked from communicating (handling empty arrays)
+  blocked_env_pairs = flatten([
+    for source_env, target_envs in local.blocked_communications : [
+      for target_env in coalesce(target_envs, []) : {
+        source = source_env
+        target = target_env
+      } if target_env != null
+    ]
+  ])
+  
   # Create a map to easily check if communication is allowed between environments
   allowed_env_map = {
     for pair in local.allowed_env_pairs : "${pair.source}-${pair.target}" => true
+  }
+  
+  # Create a map to easily check if communication is blocked between environments
+  blocked_env_map = {
+    for pair in local.blocked_env_pairs : "${pair.source}-${pair.target}" => true
   }
   
   # Parse flows from YAML instead of CSV

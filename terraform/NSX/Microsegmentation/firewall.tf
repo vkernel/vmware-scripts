@@ -102,7 +102,7 @@ resource "nsxt_policy_service" "services" {
 # Create environment isolation policy
 resource "nsxt_policy_security_policy" "environment_isolation" {
   display_name = "Environment Isolation Policy"
-  description  = "Security policy to isolate environments based on allowed_communications"
+  description  = "Security policy to isolate environments based on allowed_communications and blocked_communications"
   domain       = var.domain_id
   category     = "Environment"
   
@@ -119,6 +119,20 @@ resource "nsxt_policy_security_policy" "environment_isolation" {
       source_groups      = [nsxt_policy_group.environment_groups[rule.value.source].path]
       destination_groups = [nsxt_policy_group.environment_groups[rule.value.target].path]
       action             = "ALLOW"
+      logged             = true
+    }
+  }
+  
+  # Block rules for explicitly forbidden environment communications
+  dynamic "rule" {
+    for_each = local.blocked_env_pairs
+    
+    content {
+      display_name       = "Block ${rule.value.source} to ${rule.value.target}"
+      description        = "Block communication from ${rule.value.source} to ${rule.value.target} as specified in blocked_communications"
+      source_groups      = [nsxt_policy_group.environment_groups[rule.value.source].path]
+      destination_groups = [nsxt_policy_group.environment_groups[rule.value.target].path]
+      action             = "DROP"
       logged             = true
     }
   }
