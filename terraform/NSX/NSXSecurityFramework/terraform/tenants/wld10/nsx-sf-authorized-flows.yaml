@@ -1,0 +1,45 @@
+---
+wld10:
+  environment_policy:
+    allowed_communications:
+      env-wld10-prod:
+        - env-wld10-test
+    blocked_communications:
+      env-wld10-test:
+        - env-wld10-prod
+  application_policy:
+    - source: ext-wld10-jumphosts
+      destination: 
+        - app-wld10-prod-3holapp-web
+        - app-wld10-prod-web
+        - app-wld10-test-web
+      ports:
+        - 443
+      protocol: tcp
+    - source: 
+        - app-wld10-prod-3holapp-web
+        - app-wld10-prod-web
+        - app-wld10-test-web
+      destination: 
+        - app-wld10-prod-3holapp-application
+        - app-wld10-prod-application
+        - app-wld10-test-application
+      ports: 
+        - 8443
+      protocol: tcp
+    - source: 
+        - app-wld10-prod-3holapp-application
+        - app-wld10-prod-application
+        - app-wld10-test-application
+      destination: 
+        - app-wld10-prod-3holapp-database
+        - app-wld10-prod-database
+        - app-wld10-test-database
+      ports:
+        - 3306
+      protocol: tcp
+    - source: ten-wld10
+      destination: ext-wld10-dns
+      ports:
+        - 53
+      protocol: udp 

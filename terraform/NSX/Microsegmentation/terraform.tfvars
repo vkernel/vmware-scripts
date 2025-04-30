@@ -1,5 +1,0 @@
-nsx_manager  = "nsx01.lab.lan"
-nsx_username = "admin"
-nsx_password = "VMware1!VMware1!"
-domain_id    = "default"
-site_id      = "default" 
