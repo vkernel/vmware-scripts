@@ -29,4 +29,11 @@ output "external_service_groups" {
   value = {
     for ext_key, ext in nsxt_policy_group.external_service_groups : ext_key => ext.path
   }
+}
+
+output "emergency_groups" {
+  description = "Map of emergency group paths"
+  value = {
+    for emergency_key, emergency in nsxt_policy_group.emergency_groups : emergency_key => emergency.path
+  }
 } 

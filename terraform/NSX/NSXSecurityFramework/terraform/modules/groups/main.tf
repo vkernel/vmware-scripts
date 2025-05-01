@@ -17,6 +17,9 @@ locals {
   # Extract external services
   external_services = try(local.tenant_data.external, {})
   
+  # Extract emergency resources
+  emergency_resources = try(local.tenant_data.emergency, {})
+  
   # Flatten applications for easy access
   applications = flatten([
     for env_key, env_data in local.environments : [
@@ -38,6 +41,21 @@ locals {
       }
     ]
   ])
+  
+  # Create a list of all unique environment keys
+  environment_keys = keys(local.environments)
+  
+  # Create a list of all unique application keys
+  application_keys = distinct([
+    for app in local.applications : app.app_key
+  ])
+  
+  # Create a list of all unique sub-application keys
+  sub_application_keys = distinct(flatten([
+    for app in local.applications : [
+      for sub_app in app.sub_apps : sub_app.sub_app_key
+    ]
+  ]))
 }
 
 # Create tenant group
@@ -53,68 +71,76 @@ resource "nsxt_policy_group" "tenant_group" {
       value       = "${local.tenant_tag}"
     }
   }
+
+  tag {
+    scope = "tenant"
+    tag   = local.tenant_tag
+  }
 }
 
 # Create environment groups
 resource "nsxt_policy_group" "environment_groups" {
-  for_each = local.environments
+  for_each = toset(local.environment_keys)
   
-  display_name = each.key
-  description  = "Group for environment ${each.key}"
+  display_name = each.value
+  description  = "Group for environment ${each.value}"
   
   criteria {
     condition {
       key         = "Tag"
       member_type = "VirtualMachine"
       operator    = "EQUALS"
-      value       = "${each.key}"
+      value       = "${each.value}"
     }
+  }
+
+  tag {
+    scope = "environment"
+    tag   = each.value
   }
 }
 
 # Create application groups
 resource "nsxt_policy_group" "application_groups" {
-  for_each = {
-    for app in local.applications : app.app_key => app
-  }
+  for_each = toset(local.application_keys)
   
-  display_name = each.key
-  description  = "Group for application ${each.key}"
+  display_name = each.value
+  description  = "Group for application ${each.value}"
   
   criteria {
     condition {
       key         = "Tag"
       member_type = "VirtualMachine"
       operator    = "EQUALS"
-      value       = "${each.key}"
+      value       = "${each.value}"
     }
+  }
+
+  tag {
+    scope = "application"
+    tag   = each.value
   }
 }
 
 # Create sub-application groups
 resource "nsxt_policy_group" "sub_application_groups" {
-  for_each = {
-    for sub_app in flatten([
-      for app in local.applications : [
-        for sub in app.sub_apps : {
-          key = sub.sub_app_key
-          env = sub.env_key
-          app = sub.app_key
-        }
-      ]
-    ]) : sub_app.key => sub_app
-  }
+  for_each = toset(local.sub_application_keys)
   
-  display_name = each.key
-  description  = "Group for sub-application ${each.key}"
+  display_name = each.value
+  description  = "Group for sub-application ${each.value}"
   
   criteria {
     condition {
       key         = "Tag"
       member_type = "VirtualMachine"
       operator    = "EQUALS"
-      value       = "${each.key}"
+      value       = "${each.value}"
     }
+  }
+
+  tag {
+    scope = "sub-application"
+    tag   = each.value
   }
 }
 
@@ -132,5 +158,32 @@ resource "nsxt_policy_group" "external_service_groups" {
         ip_addresses = [criteria.value]
       }
     }
+  }
+
+  tag {
+    scope = "external"
+    tag   = each.key
+  }
+}
+
+# Create emergency groups
+resource "nsxt_policy_group" "emergency_groups" {
+  for_each = local.emergency_resources
+  
+  display_name = each.key
+  description  = "Group for emergency access ${each.key}"
+  
+  criteria {
+    condition {
+      key         = "Tag"
+      member_type = "VirtualMachine"
+      operator    = "EQUALS"
+      value       = "${each.key}"
+    }
+  }
+
+  tag {
+    scope = "emergency"
+    tag   = each.key
   }
 } 

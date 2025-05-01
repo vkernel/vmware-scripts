@@ -1,14 +1,23 @@
 ---
 wld10:
+  emergency_policy:
+    - name: Allow emergency rule on VMs with this tag
+      source: 
+        - wld10-emergency
+      destination: 
+        - any
   environment_policy:
     allowed_communications:
-      env-wld10-prod:
-        - env-wld10-test
+      - name: Allow prod environment to test environment
+        source: env-wld10-prod
+        destination: env-wld10-test
     blocked_communications:
-      env-wld10-test:
-        - env-wld10-prod
+      - name: Block test environment from prod environment
+        source: env-wld10-test
+        destination: env-wld10-prod
   application_policy:
-    - source: ext-wld10-jumphosts
+    - name: Allow jumphost to web servers on port 443
+      source: ext-wld10-jumphosts
       destination: 
         - app-wld10-prod-3holapp-web
         - app-wld10-prod-web
@@ -16,7 +25,8 @@ wld10:
       ports:
         - 443
       protocol: tcp
-    - source: 
+    - name: Allow web servers to application servers on port 8443
+      source: 
         - app-wld10-prod-3holapp-web
         - app-wld10-prod-web
         - app-wld10-test-web
@@ -27,7 +37,8 @@ wld10:
       ports: 
         - 8443
       protocol: tcp
-    - source: 
+    - name: Allow application servers to database servers on port 3306
+      source: 
         - app-wld10-prod-3holapp-application
         - app-wld10-prod-application
         - app-wld10-test-application
@@ -38,7 +49,8 @@ wld10:
       ports:
         - 3306
       protocol: tcp
-    - source: ten-wld10
+    - name: Allow wld10 servers to external DNS on port 53
+      source: ten-wld10
       destination: ext-wld10-dns
       ports:
         - 53

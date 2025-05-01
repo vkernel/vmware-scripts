@@ -1,128 +1,127 @@
-# NSX Security Framework Terraform Implementation
+# NSX Security Framework
 
-This repository contains Terraform code to implement the VMware NSX Security Framework as described in the NSX_Security_Framework document. The implementation follows the principles of micro-segmentation and Zero Trust security model.
+This Terraform project implements a robust security framework for VMware NSX environments. It creates and manages security policies, groups, services, and firewall rules based on a tenant-centric configuration model defined in YAML.
 
-## Directory Structure
+## Features
 
-```
-terraform/
-├── modules/               # Reusable Terraform modules
-│   ├── tags/              # VM tagging based on tenant, environment, application
-│   ├── groups/            # NSX groups based on tags and IP addresses
-│   ├── services/          # NSX services based on protocols and ports
-│   └── policies/          # NSX security policies based on authorized flows
-├── tenants/               # Tenant-specific configuration
-│   ├── wld09/             # Tenant wld09 configuration
-│   │   ├── nsx-sf-inventory.yaml
-│   │   └── nsx-sf-authorized-flows.yaml
-│   └── wld10/             # Tenant wld10 configuration
-│       ├── nsx-sf-inventory.yaml
-│       └── nsx-sf-authorized-flows.yaml
-├── terraform.tfvars       # Global connection parameters for NSX
-├── main.tf                # Main Terraform file with provider configuration
-├── variables.tf           # Input variables
-└── outputs.tf             # Output values
-```
+- Multi-tenancy with separate configuration per tenant
+- Tag-based microsegmentation aligned with NSX best practices
+- Emergency access policies for critical situations
+- Environment isolation with controlled cross-environment communication
+- Application-centric security policies with granular access controls
+- Support for external services and communication
 
-## Getting Started
+## Architecture
 
-### Prerequisites
+The security framework follows the concept of hierarchical security with policies implemented at different levels:
 
-- Terraform v1.0.0 or higher
-- NSX Manager access credentials
-- List of VMs to tag and group
-- List of allowed flows between groups
+1. **Emergency Policies**: Highest priority policies for critical access
+2. **Environment Policies**: Control communication between environments (e.g., Production, Test)
+3. **Application Policies**: Define allowed communications between application tiers and components
 
-### Deployment
+## Configuration Files
 
-1. Clone this repository
-2. Navigate to the `terraform` directory
-3. Edit the `terraform.tfvars` file with your NSX Manager credentials:
-   ```hcl
-   nsx_manager_host = "your-nsx-manager.example.com"
-   nsx_username     = "your-username"
-   nsx_password     = "your-password"
-   tenant_id        = "wld09"  # Set which tenant to deploy
-   ```
-4. Initialize Terraform:
-   ```bash
-   terraform init
-   ```
-5. Apply the configuration:
-   ```bash
-   terraform apply
-   ```
+Each tenant requires two YAML configuration files:
 
-### Multi-Tenant Deployment
+### 1. Inventory Configuration (nsx-sf-inventory.yaml)
 
-To deploy for a different tenant:
-
-**Option 1: Edit the terraform.tfvars file**
-```hcl
-tenant_id = "wld10"  # Change to deploy a different tenant
-```
-
-**Option 2: Override on the command line**
-```bash
-terraform apply -var="tenant_id=wld10"
-```
-
-## YAML File Structure
-
-### Inventory YAML (`nsx-sf-inventory.yaml`)
-
-This file defines the tenant hierarchy structure with environments, applications, and sub-applications. It also defines external services by IP address.
+Defines all resources (VMs, external services) organized by tenant, environment, and application tier.
 
 ```yaml
-tenant:
+tenant_id:
   internal:
-    environment:
-      application:
-        sub-application:
-          - vm1
-          - vm2
+    env-{tenant}-{environment}:
+      app-{tenant}-{environment}-{app}:
+        app-{tenant}-{environment}-{app}-{component}:
+          - vm-name-1
+          - vm-name-2
   external:
-    service:
-      - ip1
-      - ip2
+    ext-{tenant}-{service}:
+      - ip-address-1
+  emergency:
+    {tenant}-emergency:
+      - vm-name-1
 ```
 
-### Authorized Flows YAML (`nsx-sf-authorized-flows.yaml`)
+### 2. Authorized Flows Configuration (nsx-sf-authorized-flows.yaml)
 
-This file defines the allowed communication flows between environments and applications.
+Defines the allowed and blocked communication patterns between resources.
 
 ```yaml
-tenant:
+tenant_id:
+  emergency_policy:
+    - name: Allow emergency rule name
+      source:
+        - {tenant}-emergency
+      destination:
+        - any
   environment_policy:
     allowed_communications:
-      src-env:
-        - dst-env
+      - name: Allow prod to test 
+        source: env-{tenant}-prod
+        destination: env-{tenant}-test
     blocked_communications:
-      src-env:
-        - dst-env
+      - name: Block test from prod
+        source: env-{tenant}-test
+        destination: env-{tenant}-prod
   application_policy:
-    - source: src-group
-      destination: dst-group
+    - name: Rule name
+      source: 
+        - app-{tenant}-{env}-{component1}
+      destination: 
+        - app-{tenant}-{env}-{component2}
       ports:
-        - port
-      protocol: protocol
+        - 443
+      protocol: tcp
 ```
 
-## Multi-Tenant Support
+## Tagging Strategy
 
-The code is designed to support multiple tenants. Each tenant has its own directory with YAML configuration files. To deploy for a specific tenant, set the `tenant_id` variable in the terraform.tfvars file or override it on the command line.
+The framework implements a comprehensive tagging strategy:
 
-## Security Framework Implementation
+1. **Tenant Tags**: All resources are tagged with their tenant identifier (`ten-{tenant-id}`)
+2. **Environment Tags**: Resources are tagged with their environment (`env-{tenant}-{environment}`)
+3. **Application Tags**: Resources are tagged with the application they belong to (`app-{tenant}-{env}-{app}`)
+4. **Sub-Application Tags**: Resources are tagged with specific components within an application
+5. **Emergency Tags**: Resources that need emergency access are tagged accordingly
 
-This Terraform code implements the following components of the NSX Security Framework:
+## Groups
 
-1. **VM Tagging**: Automatically tags VMs based on their role in the tenant hierarchy (tenant, environment, application, sub-application)
-2. **Dynamic Groups**: Creates NSX groups with membership criteria based on VM tags
-3. **External Service Groups**: Creates groups for external services with static IP addresses
-4. **Services**: Defines NSX services for allowed protocols and ports
-5. **Environment Policies**: Implements environment-level security policies to control traffic between environments
-6. **Application Policies**: Implements fine-grained security policies for application-specific traffic flows
+Based on the tagging strategy, the following security groups are created:
 
-The implementation follows the principle of least privilege, allowing only explicitly defined traffic flows and blocking all others by default.
+- Tenant groups (all resources in a tenant)
+- Environment groups (all resources in an environment)
+- Application groups (all resources in an application)
+- Sub-application groups (all resources in a component)
+- External service groups (IP-based groups for external services)
+- Emergency groups (VMs that need emergency access)
 
-See the `USAGE.md` file for detailed instructions on how to use this solution. 
+## Implementation
+
+The framework is organized into Terraform modules:
+
+- **tags**: Creates and manages NSX tags for all resources
+- **groups**: Creates NSX security groups based on tags and IP addresses
+- **services**: Defines NSX services for protocol and port combinations
+- **policies**: Creates security policies and firewall rules
+
+## Usage
+
+1. Create a directory structure for your tenant under `terraform/tenants/{tenant-id}/`
+2. Create the inventory and authorized flows YAML files for your tenant
+3. Run Terraform to apply the configuration:
+
+```bash
+terraform init
+terraform apply -var="tenant_id=your-tenant-id"
+```
+
+## Multi-Tenancy
+
+The framework supports multiple tenants with complete isolation between them. Each tenant has:
+
+- Separate YAML configuration files
+- Dedicated security groups and policies
+- Isolated firewall rules
+
+To create a new tenant, simply duplicate and modify the YAML files for an existing tenant with the appropriate tenant ID and resource names. 

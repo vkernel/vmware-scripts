@@ -85,6 +85,7 @@ module "policies" {
     application_groups      = module.groups.application_groups
     sub_application_groups  = module.groups.sub_application_groups
     external_service_groups = module.groups.external_service_groups
+    emergency_groups        = module.groups.emergency_groups
   }
   
   services = module.services.services

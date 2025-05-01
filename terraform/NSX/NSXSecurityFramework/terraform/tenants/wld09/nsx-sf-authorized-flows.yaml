@@ -1,14 +1,23 @@
 ---
 wld09:
+  emergency_policy:
+    - name: Allow emergency rule on VMs with this tag
+      source: 
+        - wld09-emergency
+      destination: 
+        - any
   environment_policy:
     allowed_communications:
-      env-wld09-prod:
-        - env-wld09-test
+      - name: Allow prod environment to test environment
+        source: env-wld09-prod
+        destination: env-wld09-test
     blocked_communications:
-      env-wld09-test:
-        - env-wld09-prod
+      - name: Block test environment from prod environment
+        source: env-wld09-test
+        destination: env-wld09-prod
   application_policy:
-    - source: ext-wld09-jumphosts
+    - name: Allow jumphost to web servers on port 443
+      source: ext-wld09-jumphosts
       destination: 
         - app-wld09-prod-3holapp-web
         - app-wld09-prod-web
@@ -16,7 +25,8 @@ wld09:
       ports:
         - 443
       protocol: tcp
-    - source: 
+    - name: Allow web servers to application servers on port 8443
+      source: 
         - app-wld09-prod-3holapp-web
         - app-wld09-prod-web
         - app-wld09-test-web
@@ -27,7 +37,8 @@ wld09:
       ports: 
         - 8443
       protocol: tcp
-    - source: 
+    - name: Allow application servers to database servers on port 3306
+      source: 
         - app-wld09-prod-3holapp-application
         - app-wld09-prod-application
         - app-wld09-test-application
@@ -38,7 +49,8 @@ wld09:
       ports:
         - 3306
       protocol: tcp
-    - source: ten-wld09
+    - name: Allow wld09 servers to external DNS on port 53
+      source: ten-wld09
       destination: ext-wld09-dns
       ports:
         - 53
