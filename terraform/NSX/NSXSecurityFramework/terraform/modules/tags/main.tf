@@ -13,60 +13,70 @@ locals {
   tenant_data = var.inventory[local.tenant_key]
   
   # Create tag format for tenant
-  tenant_tag = "${local.tenant_key}"
+  tenant_tag = "ten-${local.tenant_key}"
   
   # Extract environment data
   environments = local.tenant_data.internal
   
-  # List of all VMs with their hierachy information
-  all_vm_data = distinct(flatten([
-    # Process all environments
-    for env_key, env in local.environments : flatten([
-      # Process all applications in each environment
-      for app_key, app in env : flatten([
-        # Check if this app has sub-applications or direct VMs
-        can(app[0]) ? 
-          # This is a direct VM list (e.g., in test environment)
-          flatten([
-            [
-              for vm in app : {
-                vm = vm
-                env_key = env_key
-                app_key = app_key
-                sub_app_key = app_key  # Use app key as sub_app_key
-                vm_index = "${env_key}-${app_key}-${app_key}-${vm}"
-              }
-            ]
-          ]) : 
-          # This has sub-applications (e.g., in production environment)
-          flatten([
-            for sub_app_key, sub_app in app : [
-              for vm in sub_app : {
-                vm = vm
-                env_key = env_key
-                app_key = app_key
-                sub_app_key = sub_app_key
-                vm_index = "${env_key}-${app_key}-${sub_app_key}-${vm}"
-              }
-            ]
-          ])
-      ])
-    ])
-  ]))
+  # Process direct VMs (no sub-applications)
+  direct_vms = flatten([
+    for env_key, env in local.environments : [
+      for app_key, app in env : 
+        # Only process apps that have a direct VM list (can index with [0])
+        can(app[0]) ? [
+          for vm in app : {
+            vm = vm
+            env_key = env_key
+            app_key = app_key
+            sub_app_key = null
+          }
+        ] : []
+    ]
+  ])
   
-  # Set of all VM names
-  all_vms = toset([for vm_data in local.all_vm_data : vm_data.vm])
+  # Process VMs in sub-applications
+  sub_app_vms = flatten([
+    for env_key, env in local.environments : [
+      for app_key, app in env : 
+        # Only process apps that have sub-applications (can't index with [0])
+        !can(app[0]) ? flatten([
+          for sub_app_key, sub_app in app : [
+            for vm in sub_app : {
+              vm = vm
+              env_key = env_key
+              app_key = app_key
+              sub_app_key = sub_app_key
+            }
+          ]
+        ]) : []
+    ]
+  ])
   
-  # Map of VM to its hierarchy tags
-  unique_vm_data = {
-    for vm_data in local.all_vm_data :
-      vm_data.vm_index => {
-        vm = vm_data.vm
-        tenant = local.tenant_tag
-        environment = vm_data.env_key
-        application = vm_data.app_key
-        sub_application = vm_data.sub_app_key != vm_data.app_key ? vm_data.sub_app_key : null
-      }
+  # Combine both types of VMs and deduplicate by VM name
+  all_vm_data_combined = concat(local.direct_vms, local.sub_app_vms)
+  
+  # Choose one VM data entry for each VM name (prioritize sub-application VMs)
+  all_vm_data = {
+    for vm_data in local.all_vm_data_combined : vm_data.vm => vm_data...
+  }
+  
+  # Set of all VM names (deduplicated)
+  all_vms = toset(keys(local.all_vm_data))
+  
+  # Find sub-applications for each VM (if available)
+  sub_apps_by_vm = {
+    for vm_name, vm_data_list in local.all_vm_data :
+      vm_name => [for d in vm_data_list : d.sub_app_key if d.sub_app_key != null]
+  }
+  
+  # Map of VM to its hierarchy tags - use VM name as the key
+  vm_hierarchy_tags = {
+    for vm_name, vm_data_list in local.all_vm_data : vm_name => {
+      tenant = local.tenant_tag
+      environment = vm_data_list[0].env_key
+      application = vm_data_list[0].app_key
+      sub_application = length(local.sub_apps_by_vm[vm_name]) > 0 ? local.sub_apps_by_vm[vm_name][0] : null
+    }
   }
   
   # Emergency stuff, if any
@@ -89,9 +99,9 @@ data "nsxt_policy_vm" "vms" {
 
 # Apply all hierarchy tags to VMs
 resource "nsxt_policy_vm_tags" "hierarchy_tags" {
-  for_each = local.unique_vm_data
+  for_each = local.vm_hierarchy_tags
   
-  instance_id = data.nsxt_policy_vm.vms[each.value.vm].instance_id
+  instance_id = data.nsxt_policy_vm.vms[each.key].instance_id
   
   # Tenant tag
   tag {
@@ -122,7 +132,7 @@ resource "nsxt_policy_vm_tags" "hierarchy_tags" {
   
   # Emergency tag (if present)
   dynamic "tag" {
-    for_each = contains(local.emergency_vms, each.value.vm) ? [local.emergency_vm_tags[each.value.vm]] : []
+    for_each = contains(local.emergency_vms, each.key) ? [local.emergency_vm_tags[each.key]] : []
     content {
       scope = "emergency"
       tag   = tag.value
