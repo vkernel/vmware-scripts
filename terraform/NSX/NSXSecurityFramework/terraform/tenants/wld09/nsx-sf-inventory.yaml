@@ -39,3 +39,5 @@ wld09:  # Tenant Key
   emergency:
     wld09-emergency:  # Emergency Key
       - p-db-01a
+      - t-db-01a
+
