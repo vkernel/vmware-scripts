@@ -37,7 +37,7 @@ wld09:  # Tenant Key
     ext-wld09-jumphosts:  # External Services Key  
       - 10.10.89.11 
   emergency:
-    wld09-emergency:  # Emergency Key
+    emg-wld09:  # Emergency Key
       - p-db-01a
       - t-db-01a
 

@@ -81,13 +81,16 @@ locals {
   
   # Emergency stuff, if any
   emergency = try(local.tenant_data.emergency, null)
-  emergency_vms = flatten([
-    for emergency_key, emergency_data in local.emergency : emergency_data
-  ])
-  emergency_vm_tags = {
-    for vm in local.emergency_vms :
-      vm => "emergency"
-  }
+  
+  # Create a mapping of VM name to its emergency group key
+  emergency_vm_tags = merge([
+    for emg_key, emg_list in local.emergency : {
+      for vm in emg_list : vm => emg_key
+    }
+  ]...)
+  
+  # Derive the list of emergency VMs from the keys of the mapping
+  emergency_vms = keys(local.emergency_vm_tags)
 }
 
 # Get VM instances by display name
@@ -132,7 +135,7 @@ resource "nsxt_policy_vm_tags" "hierarchy_tags" {
   
   # Emergency tag (if present)
   dynamic "tag" {
-    for_each = contains(local.emergency_vms, each.key) ? [local.emergency_vm_tags[each.key]] : []
+    for_each = lookup(local.emergency_vm_tags, each.key, null) != null ? [local.emergency_vm_tags[each.key]] : []
     content {
       scope = "emergency"
       tag   = tag.value
