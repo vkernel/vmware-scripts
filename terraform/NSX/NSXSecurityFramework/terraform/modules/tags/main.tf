@@ -55,28 +55,33 @@ locals {
   # Combine both types of VMs and deduplicate by VM name
   all_vm_data_combined = concat(local.direct_vms, local.sub_app_vms)
   
-  # Choose one VM data entry for each VM name (prioritize sub-application VMs)
-  all_vm_data = {
-    for vm_data in local.all_vm_data_combined : vm_data.vm => vm_data...
-  }
-  
   # Set of all VM names (deduplicated)
-  all_vms = toset(keys(local.all_vm_data))
+  all_vms = toset([for vm_data in local.all_vm_data_combined : vm_data.vm])
   
-  # Find sub-applications for each VM (if available)
-  sub_apps_by_vm = {
-    for vm_name, vm_data_list in local.all_vm_data :
-      vm_name => [for d in vm_data_list : d.sub_app_key if d.sub_app_key != null]
+  # Map VM→all application keys it belongs to
+  app_tags_by_vm = {
+    for vm in local.all_vms :
+    vm => distinct([
+      for d in local.all_vm_data_combined :
+      d.app_key if d.vm == vm
+    ])
+  }
+
+  # Map VM→all sub-application keys if any
+  sub_app_tags_by_vm = {
+    for vm in local.all_vms :
+    vm => distinct([
+      for d in local.all_vm_data_combined :
+      d.sub_app_key if d.vm == vm && d.sub_app_key != null
+    ])
   }
   
-  # Map of VM to its hierarchy tags - use VM name as the key
-  vm_hierarchy_tags = {
-    for vm_name, vm_data_list in local.all_vm_data : vm_name => {
-      tenant = local.tenant_tag
-      environment = vm_data_list[0].env_key
-      application = vm_data_list[0].app_key
-      sub_application = length(local.sub_apps_by_vm[vm_name]) > 0 ? local.sub_apps_by_vm[vm_name][0] : null
-    }
+  # Get a single entry per VM for tenant and environment tags
+  # We can use any entry since tenant/env should be the same regardless of app/sub-app
+  vm_base_data = {
+    for vm in local.all_vms : vm => (
+      [for d in local.all_vm_data_combined : d if d.vm == vm][0]
+    )
   }
   
   # Emergency stuff, if any
@@ -102,31 +107,34 @@ data "nsxt_policy_vm" "vms" {
 
 # Apply all hierarchy tags to VMs
 resource "nsxt_policy_vm_tags" "hierarchy_tags" {
-  for_each = local.vm_hierarchy_tags
+  for_each = local.vm_base_data
   
   instance_id = data.nsxt_policy_vm.vms[each.key].instance_id
   
   # Tenant tag
   tag {
     scope = "tenant"
-    tag   = each.value.tenant
+    tag   = local.tenant_tag
   }
   
   # Environment tag
   tag {
     scope = "environment"
-    tag   = each.value.environment
+    tag   = each.value.env_key
   }
   
-  # Application tag 
-  tag {
-    scope = "application"
-    tag   = each.value.application
-  }
-  
-  # Sub-application tag (if present)
+  # Application tags - one per app this VM belongs to
   dynamic "tag" {
-    for_each = each.value.sub_application != null ? [each.value.sub_application] : []
+    for_each = local.app_tags_by_vm[each.key]
+    content {
+      scope = "application"
+      tag   = tag.value
+    }
+  }
+  
+  # Sub-application tags - one per sub-app this VM belongs to
+  dynamic "tag" {
+    for_each = local.sub_app_tags_by_vm[each.key]
     content {
       scope = "sub-application"
       tag   = tag.value
