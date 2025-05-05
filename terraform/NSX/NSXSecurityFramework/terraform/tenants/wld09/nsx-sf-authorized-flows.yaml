@@ -1,9 +1,9 @@
 ---
 wld09:
-  emergency_policy:
-    - name: Allow emergency rule on VMs with this tag
+  emergency_policy:   #this policy must be available. do not remove.
+    - name: Allow emergency rule on VMs with this tag   #this rule must be available. do not remove.
       source: 
-        - wld09-emergency
+        - emg-wld09
       destination: 
         - any
   environment_policy:
