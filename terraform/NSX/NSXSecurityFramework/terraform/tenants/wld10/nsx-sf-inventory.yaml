@@ -2,33 +2,33 @@
 # Format: Tenant > Internal/External > Environment > Application > Sub Application > Resources
 wld10:  # Tenant Key
   internal:
-    env-wld10-prod:  # Environment Key
-      app-wld10-prod-3holapp:  # Application Key
-        app-wld10-prod-3holapp-database:  # Sub Application Key
-          - p-db-01b  # VM name
-        app-wld10-prod-3holapp-application:  # Sub Application Key
-          - p-app-01b
-        app-wld10-prod-3holapp-web:  # Sub Application Key 
-          - p-web-01b
-          - p-web-02b
-          - p-web-03b
-      app-wld10-prod-database:  # Application Key
-        - p-db-01b  # VM name
-      app-wld10-prod-application:  # Application Key
-        - p-app-01b
-      app-wld10-prod-web:  # Application Key
-        - p-web-01b
-        - p-web-02b
-        - p-web-03b
-    env-wld10-test:  # Environment Key
-      app-wld10-test-database:  # Application Key
-        - t-db-01b  # VM name
-      app-wld10-test-application:  # Application Key
-        - t-app-01b 
-      app-wld10-test-web:  # Application Key
-        - t-web-01b
-        - t-web-02b
-        - t-web-03b
+    env-wld10-dev:  # Environment Key
+      app-wld10-dev-3holapp:  # Application Key
+        app-wld10-dev-3holapp-database:  # Sub Application Key
+          - p-db-01a  # VM name
+        app-wld10-dev-3holapp-application:  # Sub Application Key
+          - d-app-01a
+        app-wld10-dev-3holapp-web:  # Sub Application Key 
+          - d-web-01a
+          - d-web-02a
+          - d-web-03a
+      app-wld10-dev-database:  # Application Key
+        - d-db-01a  # VM name
+      app-wld10-dev-application:  # Application Key
+        - d-app-01a
+      app-wld10-dev-web:  # Application Key
+        - d-web-01a
+        - d-web-02a
+        - d-web-03a
+    env-wld10-acc:  # Environment Key
+      app-wld10-acc-database:  # Application Key
+        - a-db-01a  # VM name
+      app-wld10-acc-application:  # Application Key
+        - a-app-01a 
+      app-wld10-acc-web:  # Application Key
+        - a-web-01a
+        - a-web-02a
+        - a-web-03a
   external:
     ext-wld10-dns:  # External Services Key  
       - 192.168.12.10  
@@ -37,5 +37,5 @@ wld10:  # Tenant Key
     ext-wld10-jumphosts:  # External Services Key  
       - 10.10.89.11 
   emergency:
-    wld10-emergency:  # Emergency Key
-      - p-db-01b
+    emg-wld10:  # Emergency Key
+      - a-db-01a
