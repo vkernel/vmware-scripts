@@ -5,7 +5,7 @@ wld10:  # Tenant Key
     env-wld10-dev:  # Environment Key
       app-wld10-dev-3holapp:  # Application Key
         app-wld10-dev-3holapp-database:  # Sub Application Key
-          - p-db-01a  # VM name
+          - d-db-01a  # VM name
         app-wld10-dev-3holapp-application:  # Sub Application Key
           - d-app-01a
         app-wld10-dev-3holapp-web:  # Sub Application Key 

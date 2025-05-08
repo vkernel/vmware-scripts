@@ -23,8 +23,8 @@ provider "nsxt" {
 # Load YAML files
 locals {
   # Determine which tenant YAML files to use based on the tenant_id
-  inventory_file = var.inventory_file != "" ? var.inventory_file : "./tenants/${var.tenant_id}/nsx-sf-inventory.yaml"
-  authorized_flows_file = var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${var.tenant_id}/nsx-sf-authorized-flows.yaml"
+  inventory_file = var.inventory_file != "" ? var.inventory_file : "./tenants/${var.tenant_id}/inventory.yaml"
+  authorized_flows_file = var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${var.tenant_id}/authorized-flows.yaml"
   
   # Parse YAML files
   inventory = yamldecode(file(local.inventory_file))

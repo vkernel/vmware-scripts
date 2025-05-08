@@ -4,7 +4,7 @@ nsx_username     = "admin"
 nsx_password     = "VMware1!VMware1!"
 
 # Default tenant to deploy
-tenant_id = "wld09"
+tenant_id = "wld10"
 
 # Optional: Override the default tenant inventory file path
 # inventory_file = "./tenants/wld09/nsx-sf-inventory.yaml"
