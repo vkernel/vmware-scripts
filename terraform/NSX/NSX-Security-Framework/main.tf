@@ -20,36 +20,42 @@ provider "nsxt" {
   retry_on_status_codes = [429]
 }
 
-# Load YAML files
+# Load YAML files for all tenants
 locals {
-  # Determine which tenant YAML files to use based on the tenant_id
-  inventory_file = var.inventory_file != "" ? var.inventory_file : "./tenants/${var.tenant_id}/inventory.yaml"
-  authorized_flows_file = var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${var.tenant_id}/authorized-flows.yaml"
-  
-  # Parse YAML files
-  inventory = yamldecode(file(local.inventory_file))
-  authorized_flows = yamldecode(file(local.authorized_flows_file))
+  # Create a map of tenant configurations
+  tenant_configs = {
+    for tenant_id in var.tenants : tenant_id => {
+      inventory_file = var.inventory_file != "" ? var.inventory_file : "./tenants/${tenant_id}/inventory.yaml"
+      authorized_flows_file = var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${tenant_id}/authorized-flows.yaml"
+      inventory = yamldecode(file(var.inventory_file != "" ? var.inventory_file : "./tenants/${tenant_id}/inventory.yaml"))
+      authorized_flows = yamldecode(file(var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${tenant_id}/authorized-flows.yaml"))
+    }
+  }
 }
 
-# Create tags
+# Create tags for each tenant
 module "tags" {
   source = "./modules/tags"
   
-  tenant_id = var.tenant_id
-  inventory = local.inventory
+  for_each = local.tenant_configs
+  
+  tenant_id = each.key
+  inventory = each.value.inventory
 
   providers = {
     nsxt = nsxt
   }
 }
 
-# Create groups
+# Create groups for each tenant
 module "groups" {
   source = "./modules/groups"
   
-  tenant_id  = var.tenant_id
-  tenant_tag = module.tags.tenant_tag
-  inventory  = local.inventory
+  for_each = local.tenant_configs
+  
+  tenant_id  = each.key
+  tenant_tag = module.tags[each.key].tenant_tag
+  inventory  = each.value.inventory
   
   depends_on = [module.tags]
   
@@ -58,12 +64,14 @@ module "groups" {
   }
 }
 
-# Create services
+# Create services for each tenant
 module "services" {
   source = "./modules/services"
   
-  tenant_id       = var.tenant_id
-  authorized_flows = local.authorized_flows
+  for_each = local.tenant_configs
+  
+  tenant_id       = each.key
+  authorized_flows = each.value.authorized_flows
   
   depends_on = [module.groups]
   
@@ -72,23 +80,25 @@ module "services" {
   }
 }
 
-# Create policies
+# Create policies for each tenant
 module "policies" {
   source = "./modules/policies"
   
-  tenant_id       = var.tenant_id
-  authorized_flows = local.authorized_flows
+  for_each = local.tenant_configs
+  
+  tenant_id       = each.key
+  authorized_flows = each.value.authorized_flows
   
   groups = {
-    tenant_group_id         = module.groups.tenant_group_id
-    environment_groups      = module.groups.environment_groups
-    application_groups      = module.groups.application_groups
-    sub_application_groups  = module.groups.sub_application_groups
-    external_service_groups = module.groups.external_service_groups
-    emergency_groups        = module.groups.emergency_groups
+    tenant_group_id         = module.groups[each.key].tenant_group_id
+    environment_groups      = module.groups[each.key].environment_groups
+    application_groups      = module.groups[each.key].application_groups
+    sub_application_groups  = module.groups[each.key].sub_application_groups
+    external_service_groups = module.groups[each.key].external_service_groups
+    emergency_groups        = module.groups[each.key].emergency_groups
   }
   
-  services = module.services.services
+  services = module.services[each.key].services
   
   depends_on = [module.services]
   

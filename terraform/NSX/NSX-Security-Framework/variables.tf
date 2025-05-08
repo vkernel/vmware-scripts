@@ -14,9 +14,9 @@ variable "nsx_password" {
   sensitive   = true
 }
 
-variable "tenant_id" {
-  description = "ID of the tenant to configure (e.g., wld09 or wld10)"
-  type        = string
+variable "tenants" {
+  description = "List of tenant IDs to configure (e.g., ['wld09', 'wld10'])"
+  type        = list(string)
 }
 
 variable "inventory_file" {

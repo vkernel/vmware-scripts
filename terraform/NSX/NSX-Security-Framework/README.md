@@ -107,13 +107,14 @@ The framework is organized into Terraform modules:
 
 ## Usage
 
-1. Create a directory structure for your tenant under `terraform/tenants/{tenant-id}/`
-2. Create the inventory and authorized flows YAML files for your tenant
-3. Run Terraform to apply the configuration:
+1. Create a directory structure for each tenant under `terraform/tenants/{tenant-id}/`
+2. Create the inventory and authorized flows YAML files for each tenant
+3. Add each tenant to the `tenants` list in terraform.tfvars
+4. Run Terraform to apply the configuration for all tenants simultaneously:
 
 ```bash
 terraform init
-terraform apply -var="tenant_id=your-tenant-id"
+terraform apply
 ```
 
 ## Multi-Tenancy
@@ -124,4 +125,10 @@ The framework supports multiple tenants with complete isolation between them. Ea
 - Dedicated security groups and policies
 - Isolated firewall rules
 
-To create a new tenant, simply duplicate and modify the YAML files for an existing tenant with the appropriate tenant ID and resource names. 
+All tenants are deployed simultaneously, allowing for multiple tenant configurations to exist without conflicts. When you run terraform apply, it will create and maintain configurations for all tenants defined in the `tenants` variable.
+
+To create a new tenant, simply:
+1. Create a new directory under `tenants/{new-tenant-id}/`
+2. Create inventory.yaml and authorized-flows.yaml files for the tenant
+3. Add the new tenant ID to the `tenants` list in terraform.tfvars
+4. Run `terraform apply` to deploy the new tenant along with existing tenants 

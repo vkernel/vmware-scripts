@@ -27,7 +27,7 @@ For each tenant you want to deploy:
 
 ### 3. Configure NSX Connection Parameters
 
-Edit the `terraform.tfvars` file with your NSX Manager details:
+Edit the `terraform.tfvars` file with your NSX Manager details and tenants:
 
 ```hcl
 # NSX Connection Parameters
@@ -35,8 +35,8 @@ nsx_manager_host = "your-nsx-manager.example.com"
 nsx_username     = "your-username"
 nsx_password     = "your-password"
 
-# Default tenant to deploy
-tenant_id = "wld09"
+# Tenants to deploy simultaneously
+tenants = ["wld09", "wld10"]
 ```
 
 ### 4. Initialize Terraform
@@ -86,56 +86,25 @@ After Terraform completes, verify the deployment:
 
 ## Deploying for Multiple Tenants
 
-You can deploy the NSX Security Framework for different tenants using the same Terraform configuration. Here are two ways to specify which tenant to deploy:
+The NSX Security Framework is designed to deploy configurations for multiple tenants simultaneously. All tenants specified in the `tenants` list in terraform.tfvars will be configured when you run terraform apply.
 
-### Option 1: Edit the terraform.tfvars file
+To add a new tenant:
+1. Create a directory for the tenant under `tenants/<tenant_id>/`
+2. Add the necessary inventory.yaml and authorized-flows.yaml files
+3. Add the tenant ID to the `tenants` list in terraform.tfvars
+4. Run terraform apply
 
-Change the `tenant_id` value in your terraform.tfvars file:
+To remove a tenant, simply remove it from the `tenants` list in terraform.tfvars and run terraform apply again.
 
-```hcl
-tenant_id = "wld10"  # Change to deploy tenant wld10 instead of wld09
-```
+## Advanced: Working with Tenants
 
-Then run:
+All tenants specified in the `tenants` list are managed together and configurations for all tenants are preserved when applying changes. This allows for:
 
-```bash
-terraform apply
-```
+1. Multiple tenant configurations to exist without conflicts
+2. Adding new tenants without affecting existing ones
+3. Managing all tenant configurations through a single terraform apply operation
 
-### Option 2: Override on the command line
-
-You can override the tenant ID without changing the terraform.tfvars file:
-
-```bash
-terraform apply -var="tenant_id=wld10"
-```
-
-## Advanced: Working with Multiple Tenants Simultaneously
-
-If you need to manage multiple tenants simultaneously and keep their state separate:
-
-1. Create separate workspaces for each tenant:
-
-```bash
-# Create and switch to a workspace for tenant wld09
-terraform workspace new wld09
-# Create and switch to a workspace for tenant wld10
-terraform workspace new wld10
-```
-
-2. Switch between workspaces when deploying:
-
-```bash
-# Switch to tenant wld09
-terraform workspace select wld09
-terraform apply -var="tenant_id=wld09"
-
-# Switch to tenant wld10
-terraform workspace select wld10
-terraform apply -var="tenant_id=wld10"
-```
-
-This approach keeps the state files separate for each tenant, allowing you to manage them independently.
+There is no need to use workspaces or separate state files for different tenants, as the framework now supports managing multiple tenants simultaneously in a single Terraform state.
 
 ## Modifying Existing Deployments
 
