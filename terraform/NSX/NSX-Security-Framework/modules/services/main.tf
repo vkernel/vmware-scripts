@@ -23,13 +23,26 @@ locals {
   ]))
   
   # Extract unique custom service definitions from application policies
-  service_definitions = distinct([
-    for rule in try(local.tenant_data.application_policy, []) : {
-      protocol = rule.protocol
-      ports    = rule.ports
-    }
-    if try(rule.protocol, null) != null && try(rule.ports, null) != null
-  ])
+  service_definitions = distinct(flatten([
+    # Process rules that have only protocol and ports (no services)
+    [
+      for rule in try(local.tenant_data.application_policy, []) : {
+        protocol = rule.protocol
+        ports    = rule.ports
+      }
+      if try(rule.protocol, null) != null && try(rule.ports, null) != null && 
+         try(rule.services, null) == null
+    ],
+    # Process rules that have both services and protocol/ports 
+    [
+      for rule in try(local.tenant_data.application_policy, []) : {
+        protocol = rule.protocol
+        ports    = rule.ports
+      }
+      if try(rule.protocol, null) != null && try(rule.ports, null) != null && 
+         try(rule.services, null) != null
+    ]
+  ]))
 }
 
 # Create NSX services for each unique protocol and port combination

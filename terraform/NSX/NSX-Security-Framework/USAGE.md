@@ -210,7 +210,7 @@ The application policy defines allowed traffic between specific application comp
 
 #### Method 3: Combining both approaches
 
-You can also combine both approaches in the same rule:
+You can combine both approaches in the same rule. When you do this, both the predefined services AND the custom port/protocol will be included in the security rule:
 
 ```yaml
 - name: Allow HTTPS and custom port access
@@ -218,9 +218,13 @@ You can also combine both approaches in the same rule:
   destination: app-wld09-prod-web
   services:
     - HTTPS
+    - SSH
   ports:
     - 8443
+    - 8080
   protocol: tcp
 ```
+
+In this example, the rule will allow traffic using the predefined HTTPS and SSH services, plus TCP traffic on ports 8443 and 8080.
 
 To see a list of available predefined services, refer to the Predefined NSX Services section in the README.md file. 

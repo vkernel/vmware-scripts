@@ -147,11 +147,6 @@ The following is a list of common predefined services available in NSX 4.2.1 tha
 - IPv6-Opts
 - OSPF
 
-### L4 Protocol Services
-- TCP
-- UDP
-- SCTP
-
 ### Application Services
 - Active Directory Server
 - Apache Tomcat
@@ -197,10 +192,14 @@ The following is a list of common predefined services available in NSX 4.2.1 tha
 - TFTP
 - WebDAV
 
-### Common Application Groups
-- WINS
-- WinRM
-- Web
+## Finding Predefined Services in NSX GUI
+
+To view all predefined services in NSX:
+
+1. Log in to the NSX Manager UI
+2. Navigate to Networking → Services → Service Definitions
+3. The list will show both system-defined (predefined) services and any custom services you've created
+4. You can filter the list to show only system-defined services
 
 To use these predefined services in your authorized-flows.yaml file, add them under the `services` section:
 
@@ -214,7 +213,7 @@ To use these predefined services in your authorized-flows.yaml file, add them un
     - ICMPv4
 ```
 
-This approach can be combined with the custom port/protocol definitions:
+This approach can be combined with the custom port/protocol definitions. When you do this, both the predefined services AND the custom port/protocol will be included in the security rule:
 
 ```yaml
 - name: Example rule with custom and predefined services
@@ -222,9 +221,13 @@ This approach can be combined with the custom port/protocol definitions:
   destination: app-wld09-prod-web
   services:
     - HTTPS
+    - SSH
   ports:
     - 8443
+    - 8080
   protocol: tcp
 ```
+
+In this example, the rule will allow traffic using the predefined HTTPS and SSH services, plus TCP traffic on ports 8443 and 8080.
 
 Note: The availability of predefined services may vary between NSX versions. This list is based on NSX 4.2.1 and represents the most common services. 

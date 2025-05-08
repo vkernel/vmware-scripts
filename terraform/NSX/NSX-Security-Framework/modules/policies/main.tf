@@ -40,12 +40,18 @@ locals {
   # Process application policy rules
   application_rules = [
     for rule in local.application_policy : {
-      name        = try(rule.name, "app-rule-${index(local.application_policy, rule) + 1}")
-      sources     = rule.source
+      name         = try(rule.name, "app-rule-${index(local.application_policy, rule) + 1}")
+      sources      = rule.source
       destinations = rule.destination
-      # Use services field if specified, otherwise construct from protocol/ports
-      service_keys = try(rule.services, null) != null ? rule.services : ["${rule.protocol}_${join("_", [for port in rule.ports : tostring(port)])}"]
-      action      = "ALLOW"
+      # Create a list of service keys combining both predefined services and custom services
+      service_keys = concat(
+        # Add predefined services if they exist
+        try(rule.services, []),
+        # Add custom service key if protocol and ports exist
+        try(rule.protocol, null) != null && try(rule.ports, null) != null ?
+          ["${rule.protocol}_${join("_", [for port in rule.ports : tostring(port)])}"] : []
+      )
+      action       = "ALLOW"
     }
   ]
   

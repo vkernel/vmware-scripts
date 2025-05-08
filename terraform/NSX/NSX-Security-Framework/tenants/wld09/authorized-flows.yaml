@@ -34,6 +34,10 @@ wld09:
       services:
         - ICMPv4
         - Microsoft SQL Server
+        - ICMP Echo Reply
+        - Windows-Global-Catalog-over-SSL
+        - HTTPS, net.tcp binding
+        - Yahoo Messenger (TCP)
       ports:
         - 445
       protocol: tcp
