@@ -6,16 +6,29 @@ terraform {
   }
 }
 
+# Data source for predefined NSX services
+data "nsxt_policy_service" "predefined_services" {
+  for_each = toset(local.predefined_service_names)
+  display_name = each.value
+}
+
 locals {
   tenant_key = var.tenant_id
   tenant_data = var.authorized_flows[local.tenant_key]
   
-  # Extract unique service definitions from application policies
+  # Extract all predefined service names from application policies
+  predefined_service_names = distinct(flatten([
+    for rule in try(local.tenant_data.application_policy, []) : 
+      try(rule.services, [])
+  ]))
+  
+  # Extract unique custom service definitions from application policies
   service_definitions = distinct([
     for rule in try(local.tenant_data.application_policy, []) : {
       protocol = rule.protocol
       ports    = rule.ports
     }
+    if try(rule.protocol, null) != null && try(rule.ports, null) != null
   ])
 }
 

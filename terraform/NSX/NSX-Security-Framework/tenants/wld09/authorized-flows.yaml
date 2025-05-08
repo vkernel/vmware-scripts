@@ -25,6 +25,18 @@ wld09:
       ports:
         - 443
       protocol: tcp
+    - name: Test ICMP between jumphost and web servers
+      source: ext-wld09-jumphosts
+      destination: 
+        - app-wld09-prod-3holapp-web
+        - app-wld09-prod-web
+        - app-wld09-test-web
+      services:
+        - ICMPv4
+        - Microsoft SQL Server
+      ports:
+        - 445
+      protocol: tcp
     - name: Allow web servers to application servers on port 8443
       source: 
         - app-wld09-prod-3holapp-web

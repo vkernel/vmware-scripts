@@ -145,4 +145,82 @@ To remove all resources created by Terraform:
 terraform destroy
 ```
 
-**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation. 
+**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation.
+
+## Structure of authorized-flows.yaml
+
+The `authorized-flows.yaml` file for each tenant defines the allowed traffic flows between different groups. It consists of several sections:
+
+### Emergency Policy
+
+The emergency policy contains rules that have the highest priority:
+
+```yaml
+emergency_policy:
+  - name: Allow emergency rule on VMs with this tag
+    source: emg-wld09
+    destination: any
+```
+
+### Environment Policy
+
+The environment policy controls communication between different environments (e.g., production, test, etc.):
+
+```yaml
+environment_policy:
+  allowed_communications:
+    - name: Allow prod environment to test environment
+      source: env-wld09-prod
+      destination: env-wld09-test
+  blocked_communications:
+    - name: Block test environment from prod environment
+      source: env-wld09-test
+      destination: env-wld09-prod
+```
+
+### Application Policy
+
+The application policy defines allowed traffic between specific application components. You can specify traffic flows using two methods:
+
+#### Method 1: Using ports and protocol
+
+```yaml
+- name: Allow web servers to application servers on port 8443
+  source: 
+    - app-wld09-prod-web
+  destination: 
+    - app-wld09-prod-application
+  ports: 
+    - 8443
+  protocol: tcp
+```
+
+#### Method 2: Using predefined NSX services
+
+```yaml
+- name: Allow HTTPS and SSH access to web servers
+  source: ext-wld09-jumphosts
+  destination: 
+    - app-wld09-prod-web
+  services:
+    - HTTPS
+    - SSH
+    - ICMPv4
+```
+
+#### Method 3: Combining both approaches
+
+You can also combine both approaches in the same rule:
+
+```yaml
+- name: Allow HTTPS and custom port access
+  source: ext-wld09-jumphosts
+  destination: app-wld09-prod-web
+  services:
+    - HTTPS
+  ports:
+    - 8443
+  protocol: tcp
+```
+
+To see a list of available predefined services, refer to the Predefined NSX Services section in the README.md file. 

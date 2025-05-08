@@ -132,3 +132,99 @@ To create a new tenant, simply:
 2. Create inventory.yaml and authorized-flows.yaml files for the tenant
 3. Add the new tenant ID to the `tenants` list in terraform.tfvars
 4. Run `terraform apply` to deploy the new tenant along with existing tenants 
+
+## Predefined NSX Services
+
+The following is a list of common predefined services available in NSX 4.2.1 that can be used in the `services` section of authorized-flows.yaml:
+
+### IP Protocol Services
+- ICMPv4
+- ICMPv6
+- IGMP
+- GRE
+- IPv6-ICMP
+- IPv6-NoNxt
+- IPv6-Opts
+- OSPF
+
+### L4 Protocol Services
+- TCP
+- UDP
+- SCTP
+
+### Application Services
+- Active Directory Server
+- Apache Tomcat
+- BGP
+- CIFS
+- DHCP Client
+- DHCP Server
+- DHCP-UDP
+- DNS
+- DNS-TCP
+- DNS-UDP
+- FTP
+- HTTP
+- HTTPS
+- IMAP
+- IMAPS
+- Kerberos
+- LDAP
+- LDAP over SSL
+- Microsoft SQL Server
+- MS RPC
+- MySQL
+- NFS
+- NTP
+- OraDB
+- Oracle DB SSL
+- Oracle Database
+- POP3
+- POP3S
+- PostgreSQL
+- RDP
+- RPC-EPMAP
+- SMB
+- SMB over IP
+- SMTP
+- SNMP
+- SSH
+- SSL
+- Syslog
+- Syslog-TCP
+- Syslog-UDP
+- Telnet
+- TFTP
+- WebDAV
+
+### Common Application Groups
+- WINS
+- WinRM
+- Web
+
+To use these predefined services in your authorized-flows.yaml file, add them under the `services` section:
+
+```yaml
+- name: Example rule with predefined services
+  source: ext-wld09-jumphosts
+  destination: app-wld09-prod-web
+  services:
+    - HTTPS
+    - SSH
+    - ICMPv4
+```
+
+This approach can be combined with the custom port/protocol definitions:
+
+```yaml
+- name: Example rule with custom and predefined services
+  source: ext-wld09-jumphosts
+  destination: app-wld09-prod-web
+  services:
+    - HTTPS
+  ports:
+    - 8443
+  protocol: tcp
+```
+
+Note: The availability of predefined services may vary between NSX versions. This list is based on NSX 4.2.1 and represents the most common services. 

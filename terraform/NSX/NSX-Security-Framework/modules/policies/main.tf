@@ -43,9 +43,8 @@ locals {
       name        = try(rule.name, "app-rule-${index(local.application_policy, rule) + 1}")
       sources     = rule.source
       destinations = rule.destination
-      services    = "${rule.protocol}_${join("_", [for port in rule.ports : tostring(port)])}"
-      protocol    = rule.protocol
-      ports       = rule.ports
+      # Use services field if specified, otherwise construct from protocol/ports
+      service_keys = try(rule.services, null) != null ? rule.services : ["${rule.protocol}_${join("_", [for port in rule.ports : tostring(port)])}"]
       action      = "ALLOW"
     }
   ]
@@ -234,7 +233,13 @@ resource "nsxt_policy_security_policy" "application_policy" {
         )
       ])
       
-      services         = [var.services[rule.value.services].path]
+      # Handle services - can be predefined or custom
+      services = flatten([
+        for service_key in rule.value.service_keys : [
+          try(var.services[service_key].path, "")
+        ]
+        if try(var.services[service_key].path, "") != ""
+      ])
       action           = rule.value.action
       logged           = true
     }
