@@ -5,9 +5,3 @@ nsx_password     = "VMware1!VMware1!"
 
 # Tenants to deploy
 tenants = ["wld09", "wld10"]
-
-# Optional: Override the default tenant inventory file path
-# inventory_file = "./tenants/wld09/nsx-sf-inventory.yaml"
-
-# Optional: Override the default tenant authorized flows file path
-# authorized_flows_file = "./tenants/wld09/nsx-sf-authorized-flows.yaml" 
