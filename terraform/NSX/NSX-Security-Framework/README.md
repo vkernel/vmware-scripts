@@ -85,6 +85,45 @@ The framework implements a comprehensive tagging strategy:
 4. **Sub-Application Tags**: Resources are tagged with specific components within an application
 5. **Emergency Tags**: Resources that need emergency access are tagged accordingly
 
+### Tagging Hierarchy Diagram
+
+```
+┌───────────────────────┐
+│       Tenant Tag      │
+│    (ten-{tenant-id})  │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────┐
+│    Environment Tag    │
+│(env-{tenant}-{env})   │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────┐
+│    Application Tag    │
+│(app-{tenant}-{env}-   │
+│        {app})         │
+└───────────┬───────────┘
+            │
+            ▼
+┌───────────────────────┐
+│  Sub-Application Tag  │
+│(app-{tenant}-{env}-   │
+│  {app}-{component})   │
+└───────────────────────┘
+```
+
+### VM Tagging Example
+
+```
+VM: web-server-01
+├── Tenant Tag: ten-wld09
+├── Environment Tag: env-wld09-prod
+├── Application Tag: app-wld09-prod-3holapp
+└── Sub-Application Tag: app-wld09-prod-3holapp-database
+```
+
 ## Groups
 
 Based on the tagging strategy, the following security groups are created:
@@ -95,6 +134,95 @@ Based on the tagging strategy, the following security groups are created:
 - Sub-application groups (all resources in a component)
 - External service groups (IP-based groups for external services)
 - Emergency groups (VMs that need emergency access)
+
+### Groups and Tags Relationship Diagram
+
+```
+                  ┌────────────────────┐
+                  │   NSX-T Platform   │
+                  └─────────┬──────────┘
+                            │
+                            ▼
+          ┌─────────────────────────────────┐
+          │        VM Inventory Tags        │
+          └──────────────┬──────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────┐
+│                  NSX-T Groups                   │
+├─────────────────┬─────────────┬─────────────────┤
+│  Tenant Groups  │Environment  │  Application    │
+│ten-{tenant-id}  │   Groups    │    Groups       │
+└─────────────────┴──────┬──────┴─────────────────┘
+                         │               ▲
+                         │               │
+                         ▼               │
+┌─────────────────────────────────────────────────┐
+│               Security Policies                 │
+├─────────────────┬─────────────┬─────────────────┤
+│   Emergency     │Environment  │  Application    │
+│    Policy       │   Policy    │    Policy       │
+└─────────────────┴─────────────┴─────────────────┘
+```
+
+### Detailed Component Relationship Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                             YAML Configuration                          │
+├────────────────────────────────┬────────────────────────────────────────┤
+│         inventory.yaml         │       authorized-flows.yaml            │
+│  (VM and tag definitions)      │  (Policy and rule definitions)         │
+└──────────────┬─────────────────┴─────────────────┬────────────────────┬─┘
+               │                                   │                    │
+               ▼                                   │                    │
+┌──────────────────────────┐                       │                    │
+│       Tags Module        │                       │                    │
+│ (Creates NSX-T VM Tags)  │                       │                    │
+└──────────────┬───────────┘                       │                    │
+               │                                   │                    │
+               ▼                                   │                    │
+┌──────────────────────────┐                       │                    │
+│      Groups Module       │◄──────────────────────┘                    │
+│ (Creates NSX-T Groups    │                                            │
+│  based on tags)          │                                            │
+└──────────────┬───────────┘                                            │
+               │                                                        │
+               │           ┌──────────────────────────┐                 │
+               │           │     Services Module      │◄────────────────┘
+               │           │ (Creates predefined &    │
+               │           │  custom service defs)    │
+               │           └─────────────┬────────────┘
+               │                         │
+               │                         │
+               ▼                         ▼
+┌─────────────────────────────────────────────────────┐
+│                Policies Module                      │
+│ (Creates security policies and firewall rules       │
+│  using groups and services)                         │
+└─────────────────────────────────────────────────────┘
+```
+
+### Security Policy Hierarchy
+
+```
+┌───────────────────────────────────────────┐
+│         NSX Security Framework            │
+└───────────────────┬───────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Security Policy Hierarchy                    │
+├─────────────────────┬─────────────────────┬─────────────────────┤
+│ Emergency Policy    │ Environment Policy  │ Application Policy  │
+│ (Highest Priority)  │ (Medium Priority)   │ (Lowest Priority)   │
+├─────────────────────┼─────────────────────┼─────────────────────┤
+│ - Emergency access  │ - Env isolation     │ - App tier comms    │
+│ - Critical systems  │ - Dev/Test/Prod     │ - Service access    │
+│                     │   boundaries        │ - Custom & predefined│
+│                     │                     │   service definitions│
+└─────────────────────┴─────────────────────┴─────────────────────┘
+```
 
 ## Implementation
 

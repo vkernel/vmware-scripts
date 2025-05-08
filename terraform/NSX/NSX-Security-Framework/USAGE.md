@@ -110,6 +110,22 @@ There is no need to use workspaces or separate state files for different tenants
 
 The `authorized-flows.yaml` file for each tenant defines the allowed traffic flows between different groups. It consists of several sections:
 
+### Policies Structure Diagram
+
+```
+authorized-flows.yaml
+├── tenant_id: (e.g., wld09, wld10)
+│   ├── emergency_policy:
+│   │   └── [list of emergency rules]
+│   ├── environment_policy:
+│   │   ├── allowed_communications:
+│   │   │   └── [list of allowed env rules]
+│   │   └── blocked_communications:
+│   │       └── [list of blocked env rules]
+│   └── application_policy:
+│       └── [list of application rules]
+```
+
 ### Emergency Policy
 
 The emergency policy contains rules that have the highest priority:
@@ -140,6 +156,23 @@ environment_policy:
 ### Application Policy
 
 The application policy defines allowed traffic between specific application components. You can specify traffic flows using three methods:
+
+#### Application Policy Methods Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Application Policy Methods                    │
+├─────────────────────┬─────────────────────┬─────────────────────┤
+│      Method 1       │      Method 2       │      Method 3       │
+│  Custom Protocol    │    Predefined       │     Combined        │
+│      & Ports        │     Services        │     Approach        │
+├─────────────────────┼─────────────────────┼─────────────────────┤
+│ - protocol: tcp     │ - services:         │ - services:         │
+│ - ports: [8443]     │   - HTTPS           │   - HTTPS           │
+│                     │   - SSH             │ - protocol: tcp     │
+│                     │                     │ - ports: [8443]     │
+└─────────────────────┴─────────────────────┴─────────────────────┘
+```
 
 #### Method 1: Using ports and protocol
 
@@ -250,4 +283,45 @@ To remove all resources created by Terraform:
 terraform destroy
 ```
 
-**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation. 
+**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation.
+
+## Deployment Workflow
+
+The following diagram illustrates the overall deployment process:
+
+```
+┌─────────────────────┐
+│ Prepare YAML Files  │
+│ for Each Tenant     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ Configure           │
+│ terraform.tfvars    │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ Run terraform init  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ Run terraform apply │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────────────────────────┐
+│            Resources Created            │
+├──────────────┬──────────────┬───────────┤
+│ VM Tags      │ NSX Groups   │ Services  │
+└──────────────┴──────────────┴───────────┘
+           │
+           ▼
+┌─────────────────────────────────────────┐
+│         Security Policies Created       │
+├──────────────┬──────────────┬───────────┤
+│ Emergency    │ Environment  │ Application│
+└──────────────┴──────────────┴───────────┘
+``` 
