@@ -20,8 +20,8 @@ This guide provides step-by-step instructions for deploying the NSX Security Fra
 For each tenant you want to deploy:
 
 1. Review and modify the tenant YAML files in the `tenants/<tenant_id>` directory:
-   - `nsx-sf-inventory.yaml`: Defines the tenant structure (environments, applications, VMs)
-   - `nsx-sf-authorized-flows.yaml`: Defines the allowed traffic flows
+   - `inventory.yaml`: Defines the tenant structure (environments, applications, VMs)
+   - `authorized-flows.yaml`: Defines the allowed traffic flows
 
 2. Make sure the VM names in your YAML files match the display names of your actual VMs in NSX.
 
@@ -106,47 +106,6 @@ All tenants specified in the `tenants` list are managed together and configurati
 
 There is no need to use workspaces or separate state files for different tenants, as the framework now supports managing multiple tenants simultaneously in a single Terraform state.
 
-## Modifying Existing Deployments
-
-To modify an existing deployment:
-
-1. Update the relevant YAML files with your changes
-2. Run Terraform again:
-   ```bash
-   terraform apply
-   ```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Provider Not Found Error**:
-   - Make sure you've run `terraform init`
-   - Check that the provider block in `config/providers.tf` is correctly specified
-
-2. **VM Tagging Failures**:
-   - Verify that VM display names exactly match those in your YAML files
-   - Check that your NSX service account has sufficient permissions
-
-3. **Security Policy Not Working**:
-   - Verify that groups are correctly created
-   - Check that services are defined with correct protocols and ports
-   - Ensure policies are correctly applied to the right scope
-
-4. **YAML Parsing Errors**:
-   - Ensure your YAML files are properly formatted with correct indentation
-   - Validate YAML syntax using an online YAML validator
-
-## Resource Cleanup
-
-To remove all resources created by Terraform:
-
-```bash
-terraform destroy
-```
-
-**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation.
-
 ## Structure of authorized-flows.yaml
 
 The `authorized-flows.yaml` file for each tenant defines the allowed traffic flows between different groups. It consists of several sections:
@@ -180,7 +139,7 @@ environment_policy:
 
 ### Application Policy
 
-The application policy defines allowed traffic between specific application components. You can specify traffic flows using two methods:
+The application policy defines allowed traffic between specific application components. You can specify traffic flows using three methods:
 
 #### Method 1: Using ports and protocol
 
@@ -227,4 +186,68 @@ You can combine both approaches in the same rule. When you do this, both the pre
 
 In this example, the rule will allow traffic using the predefined HTTPS and SSH services, plus TCP traffic on ports 8443 and 8080.
 
-To see a list of available predefined services, refer to the Predefined NSX Services section in the README.md file. 
+To see a list of available predefined services, refer to the Predefined NSX Services section in the README.md file. You can also find the complete list in the NSX Management UI under Networking → Services → Service Definitions.
+
+## Finding and Using NSX Predefined Services
+
+NSX provides approximately 400+ predefined services that can be used in your security policies. To view and use these services:
+
+1. **View in NSX UI**: 
+   - Navigate to Networking → Services → Service Definitions
+   - Filter for system-defined services
+
+2. **Export to CSV**:
+   - Use the export feature in the NSX UI to get a complete list
+
+3. **Use in Configuration**:
+   - Reference the exact service name in your authorized-flows.yaml file
+   - Example: `services: ["HTTPS", "SSH"]`
+
+4. **API Access**:
+   - Query the NSX API to retrieve service definitions:
+   - `GET https://your-nsx-manager/api/v1/infra/services`
+
+## Modifying Existing Deployments
+
+To modify an existing deployment:
+
+1. Update the relevant YAML files with your changes
+2. Run Terraform again:
+   ```bash
+   terraform apply
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Provider Not Found Error**:
+   - Make sure you've run `terraform init`
+   - Check that the provider block in `main.tf` is correctly specified
+
+2. **VM Tagging Failures**:
+   - Verify that VM display names exactly match those in your YAML files
+   - Check that your NSX service account has sufficient permissions
+
+3. **Security Policy Not Working**:
+   - Verify that groups are correctly created
+   - Check that services are defined with correct protocols and ports
+   - Ensure policies are correctly applied to the right scope
+
+4. **YAML Parsing Errors**:
+   - Ensure your YAML files are properly formatted with correct indentation
+   - Validate YAML syntax using an online YAML validator
+
+5. **Predefined Service Not Found**:
+   - Verify the exact spelling of the service name as shown in NSX UI
+   - Check if the service exists in your NSX version
+
+## Resource Cleanup
+
+To remove all resources created by Terraform:
+
+```bash
+terraform destroy
+```
+
+**Caution**: This will remove all the NSX resources created by this Terraform configuration. Make sure this is what you want before confirming the destroy operation. 

@@ -135,73 +135,11 @@ To create a new tenant, simply:
 
 ## Predefined NSX Services
 
-The following is a list of common predefined services available in NSX 4.2.1 that can be used in the `services` section of authorized-flows.yaml:
+NSX provides approximately 400+ predefined services that can be used directly in your security policies. The NSX-Security-Framework allows you to reference these predefined services by name in the `services` section of your authorized-flows.yaml file.
 
-### IP Protocol Services
-- ICMPv4
-- ICMPv6
-- IGMP
-- GRE
-- IPv6-ICMP
-- IPv6-NoNxt
-- IPv6-Opts
-- OSPF
+### Using Predefined Services
 
-### Application Services
-- Active Directory Server
-- Apache Tomcat
-- BGP
-- CIFS
-- DHCP Client
-- DHCP Server
-- DHCP-UDP
-- DNS
-- DNS-TCP
-- DNS-UDP
-- FTP
-- HTTP
-- HTTPS
-- IMAP
-- IMAPS
-- Kerberos
-- LDAP
-- LDAP over SSL
-- Microsoft SQL Server
-- MS RPC
-- MySQL
-- NFS
-- NTP
-- OraDB
-- Oracle DB SSL
-- Oracle Database
-- POP3
-- POP3S
-- PostgreSQL
-- RDP
-- RPC-EPMAP
-- SMB
-- SMB over IP
-- SMTP
-- SNMP
-- SSH
-- SSL
-- Syslog
-- Syslog-TCP
-- Syslog-UDP
-- Telnet
-- TFTP
-- WebDAV
-
-## Finding Predefined Services in NSX GUI
-
-To view all predefined services in NSX:
-
-1. Log in to the NSX Manager UI
-2. Navigate to Networking → Services → Service Definitions
-3. The list will show both system-defined (predefined) services and any custom services you've created
-4. You can filter the list to show only system-defined services
-
-To use these predefined services in your authorized-flows.yaml file, add them under the `services` section:
+To use predefined services in your security policies, specify them in the `services` section:
 
 ```yaml
 - name: Example rule with predefined services
@@ -213,7 +151,7 @@ To use these predefined services in your authorized-flows.yaml file, add them un
     - ICMPv4
 ```
 
-This approach can be combined with the custom port/protocol definitions. When you do this, both the predefined services AND the custom port/protocol will be included in the security rule:
+This approach can be combined with custom port/protocol definitions. When you do this, both the predefined services AND the custom port/protocol will be included in the security rule:
 
 ```yaml
 - name: Example rule with custom and predefined services
@@ -230,4 +168,24 @@ This approach can be combined with the custom port/protocol definitions. When yo
 
 In this example, the rule will allow traffic using the predefined HTTPS and SSH services, plus TCP traffic on ports 8443 and 8080.
 
-Note: The availability of predefined services may vary between NSX versions. This list is based on NSX 4.2.1 and represents the most common services. 
+### Finding Predefined Services in NSX
+
+To view all predefined services available in your NSX instance:
+
+1. Log in to the NSX Manager UI
+2. Navigate to Networking → Services → Service Definitions
+3. The list will show both system-defined (predefined) services and any custom services you've created
+4. You can filter the list to show only system-defined services
+
+### Important Notes:
+
+1. **Availability**: The predefined services available can vary between NSX versions. The examples above are based on NSX 4.2.1.
+
+2. **Service Names**: The exact name shown in the NSX UI must be used in your configuration.
+
+3. **API Access**: You can also get the full list of services through the NSX API:
+   ```
+   GET https://your-nsx-manager/api/v1/infra/services
+   ```
+
+4. **Export Option**: The NSX UI allows you to export the complete list of services to a CSV file for reference. 

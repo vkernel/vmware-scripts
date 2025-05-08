@@ -25,10 +25,10 @@ locals {
   # Create a map of tenant configurations
   tenant_configs = {
     for tenant_id in var.tenants : tenant_id => {
-      inventory_file = var.inventory_file != "" ? var.inventory_file : "./tenants/${tenant_id}/inventory.yaml"
-      authorized_flows_file = var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${tenant_id}/authorized-flows.yaml"
-      inventory = yamldecode(file(var.inventory_file != "" ? var.inventory_file : "./tenants/${tenant_id}/inventory.yaml"))
-      authorized_flows = yamldecode(file(var.authorized_flows_file != "" ? var.authorized_flows_file : "./tenants/${tenant_id}/authorized-flows.yaml"))
+      inventory_file = coalesce(var.inventory_file, "./tenants/${tenant_id}/inventory.yaml")
+      authorized_flows_file = coalesce(var.authorized_flows_file, "./tenants/${tenant_id}/authorized-flows.yaml")
+      inventory = yamldecode(file(coalesce(var.inventory_file, "./tenants/${tenant_id}/inventory.yaml")))
+      authorized_flows = yamldecode(file(coalesce(var.authorized_flows_file, "./tenants/${tenant_id}/authorized-flows.yaml")))
     }
   }
 }
