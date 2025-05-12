@@ -76,12 +76,13 @@ resource "nsxt_policy_security_policy" "emergency_policy" {
   locked       = false
   stateful     = true
   sequence_number = 1  # Highest priority
-  scope = [var.groups.tenant_group_id]
+  #scope = [var.groups.tenant_group_id]
 
   dynamic "rule" {
     for_each = local.emergency_rules
     content {
       display_name       = rule.value.name
+      scope = [var.groups.tenant_group_id]
       
       # Handle source groups with appropriate lookup based on format
       source_groups = flatten([
@@ -154,12 +155,13 @@ resource "nsxt_policy_security_policy" "environment_policy" {
   locked       = false
   stateful     = true
   sequence_number = 2  # Second priority after emergency
-  scope = [var.groups.tenant_group_id]
+  #scope = [var.groups.tenant_group_id]
 
   dynamic "rule" {
     for_each = local.environment_rules
     content {
       display_name       = rule.value.name
+      scope = [var.groups.tenant_group_id]
       source_groups      = [var.groups.environment_groups[rule.value.source]]
       destination_groups = [var.groups.environment_groups[rule.value.destination]]
       action             = rule.value.action
@@ -180,12 +182,13 @@ resource "nsxt_policy_security_policy" "application_policy" {
   locked       = false
   stateful     = true
   sequence_number = 3  # Third priority after environment
-  scope = [var.groups.tenant_group_id]
+  #scope = [var.groups.tenant_group_id]
 
   dynamic "rule" {
     for_each = local.application_rules
     content {
       display_name       = rule.value.name
+      scope = [var.groups.tenant_group_id]
       
       # Handle source groups with appropriate lookup based on format
       source_groups = flatten([
