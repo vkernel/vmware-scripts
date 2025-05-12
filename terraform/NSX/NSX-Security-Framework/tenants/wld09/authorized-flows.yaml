@@ -16,12 +16,20 @@ wld09:
         source: env-wld09-test
         destination: env-wld09-prod
   application_policy:
+    - name: Allow jumphost to ten-wld09 on port 22
+      source: ext-wld09-jumphosts
+      destination: 
+        - ten-wld09
+      services:
+        - SSH
     - name: Allow jumphost to web servers on port 443
       source: ext-wld09-jumphosts
       destination: 
         - app-wld09-prod-3holapp-web
         - app-wld09-prod-web
         - app-wld09-test-web
+      services:
+        - ICMPv4
       ports:
         - 443
       protocol: tcp
@@ -33,11 +41,6 @@ wld09:
         - app-wld09-test-web
       services:
         - ICMPv4
-        - Microsoft SQL Server
-        - ICMP Echo Reply
-        - Windows-Global-Catalog-over-SSL
-        - HTTPS, net.tcp binding
-        - Yahoo Messenger (TCP)
       ports:
         - 445
       protocol: tcp
@@ -50,6 +53,8 @@ wld09:
         - app-wld09-prod-3holapp-application
         - app-wld09-prod-application
         - app-wld09-test-application
+      services:
+        - ICMPv4
       ports: 
         - 8443
       protocol: tcp
@@ -62,6 +67,8 @@ wld09:
         - app-wld09-prod-3holapp-database
         - app-wld09-prod-database
         - app-wld09-test-database
+      services:
+        - ICMPv4
       ports:
         - 3306
       protocol: tcp

@@ -16,12 +16,20 @@ wld10:
         source: env-wld10-acc
         destination: env-wld10-dev
   application_policy:
+    - name: Allow jumphost to ten-wld10 on port 22
+      source: ext-wld10-jumphosts
+      destination: 
+        - ten-wld10
+      services:
+        - SSH
     - name: Allow jumphost to web servers on port 443
       source: ext-wld10-jumphosts
       destination: 
         - app-wld10-dev-3holapp-web
         - app-wld10-dev-web
         - app-wld10-acc-web
+      services:
+        - ICMPv4
       ports:
         - 443
       protocol: tcp
@@ -34,6 +42,8 @@ wld10:
         - app-wld10-dev-3holapp-application
         - app-wld10-dev-application
         - app-wld10-acc-application
+      services:
+        - ICMPv4
       ports: 
         - 8443
       protocol: tcp
@@ -46,6 +56,8 @@ wld10:
         - app-wld10-dev-3holapp-database
         - app-wld10-dev-database
         - app-wld10-acc-database
+      services:
+        - ICMPv4
       ports:
         - 3306
       protocol: tcp
