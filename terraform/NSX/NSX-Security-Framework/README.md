@@ -55,15 +55,18 @@ tenant_id:
         - {tenant}-emergency
       destination:
         - any
+      scope_enabled: true  # Optional: Set to false to disable tenant scope (defaults to true)
   environment_policy:
     allowed_communications:
       - name: Allow prod to test 
         source: env-{tenant}-prod
         destination: env-{tenant}-test
+        scope_enabled: true  # Optional: Set to false to disable tenant scope (defaults to true)
     blocked_communications:
       - name: Block test from prod
         source: env-{tenant}-test
         destination: env-{tenant}-prod
+        scope_enabled: true  # Optional: Set to false to disable tenant scope (defaults to true)
   application_policy:
     - name: Rule name
       source: 
@@ -73,6 +76,7 @@ tenant_id:
       ports:
         - 443
       protocol: tcp
+      scope_enabled: true  # Optional: Set to false to disable tenant scope (defaults to true)
 ```
 
 ## Tagging Strategy

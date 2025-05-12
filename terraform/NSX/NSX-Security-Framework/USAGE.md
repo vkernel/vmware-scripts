@@ -219,6 +219,33 @@ You can combine both approaches in the same rule. When you do this, both the pre
 
 In this example, the rule will allow traffic using the predefined HTTPS and SSH services, plus TCP traffic on ports 8443 and 8080.
 
+### Controlling Scope for Security Rules
+
+Each rule can optionally control whether the tenant scope is applied:
+
+```yaml
+- name: Allow web servers to application servers on port 8443
+  source: 
+    - app-wld09-prod-web
+  destination: 
+    - app-wld09-prod-application
+  ports: 
+    - 8443
+  protocol: tcp
+  scope_enabled: true  # Optional: Set to false to disable tenant scope (defaults to true)
+```
+
+When `scope_enabled` is set to:
+- `true` (default): The rule is applied only to resources with the tenant tag
+- `false`: The scope is not applied, which means the rule applies globally regardless of tenant tag
+
+The `scope_enabled` parameter can be applied to:
+- Emergency policy rules
+- Environment policy rules (both allowed and blocked communications)
+- Application policy rules
+
+Use this feature when you need to create rules that should apply to resources without the tenant tag or that require global application.
+
 To see a list of available predefined services, refer to the Predefined NSX Services section in the README.md file. You can also find the complete list in the NSX Management UI under Networking → Services → Service Definitions.
 
 ## Finding and Using NSX Predefined Services

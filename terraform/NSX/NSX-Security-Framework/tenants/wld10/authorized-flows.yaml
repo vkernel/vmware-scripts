@@ -6,15 +6,18 @@ wld10:
         - emg-wld10
       destination: 
         - any
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
   environment_policy:
     allowed_communications:
       - name: Allow dev environment to acc environment
         source: env-wld10-dev
         destination: env-wld10-acc
+        scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     blocked_communications:
       - name: Block acc environment from dev environment
         source: env-wld10-acc
         destination: env-wld10-dev
+        scope_enabled: true  # Set to false to disable tenant scope, defaults to true
   application_policy:
     - name: Allow jumphost to ten-wld10 on port 22
       source: ext-wld10-jumphosts
@@ -22,6 +25,7 @@ wld10:
         - ten-wld10
       services:
         - SSH
+      scope_enabled: false  # Set to false to disable tenant scope, defaults to true
     - name: Allow jumphost to web servers on port 443
       source: ext-wld10-jumphosts
       destination: 
@@ -33,6 +37,7 @@ wld10:
       ports:
         - 443
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow web servers to application servers on port 8443
       source: 
         - app-wld10-dev-3holapp-web
@@ -47,6 +52,7 @@ wld10:
       ports: 
         - 8443
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow application servers to database servers on port 3306
       source: 
         - app-wld10-dev-3holapp-application
@@ -61,9 +67,11 @@ wld10:
       ports:
         - 3306
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow wld10 servers to external DNS on port 53
       source: ten-wld10
       destination: ext-wld10-dns
       ports:
-        - 53
-      protocol: udp 
+        - 53  
+      protocol: udp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true 

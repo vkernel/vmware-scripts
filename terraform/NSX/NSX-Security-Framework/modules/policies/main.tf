@@ -18,19 +18,21 @@ locals {
   # Process allowed and blocked environment communications
   allowed_env_rules = [
     for rule in try(local.environment_policy.allowed_communications, []) : {
-      name        = try(rule.name, "allow-${rule.source}-to-${rule.destination}")
-      source      = rule.source
-      destination = rule.destination
-      action      = "ALLOW"
+      name          = try(rule.name, "allow-${rule.source}-to-${rule.destination}")
+      source        = rule.source
+      destination   = rule.destination
+      action        = "ALLOW"
+      scope_enabled = try(rule.scope_enabled, true)
     }
   ]
 
   blocked_env_rules = [
     for rule in try(local.environment_policy.blocked_communications, []) : {
-      name        = try(rule.name, "block-${rule.source}-to-${rule.destination}")
-      source      = rule.source
-      destination = rule.destination
-      action      = "DROP"
+      name          = try(rule.name, "block-${rule.source}-to-${rule.destination}")
+      source        = rule.source
+      destination   = rule.destination
+      action        = "DROP"
+      scope_enabled = try(rule.scope_enabled, true)
     }
   ]
 
@@ -40,28 +42,30 @@ locals {
   # Process application policy rules
   application_rules = [
     for rule in local.application_policy : {
-      name         = try(rule.name, "app-rule-${index(local.application_policy, rule) + 1}")
-      sources      = rule.source
-      destinations = rule.destination
+      name          = try(rule.name, "app-rule-${index(local.application_policy, rule) + 1}")
+      sources       = rule.source
+      destinations  = rule.destination
       # Create a list of service keys combining both predefined services and custom services
-      service_keys = concat(
+      service_keys  = concat(
         # Add predefined services if they exist
         try(rule.services, []),
         # Add custom service key if protocol and ports exist
         try(rule.protocol, null) != null && try(rule.ports, null) != null ?
           ["${rule.protocol}_${join("_", [for port in rule.ports : tostring(port)])}"] : []
       )
-      action       = "ALLOW"
+      action        = "ALLOW"
+      scope_enabled = try(rule.scope_enabled, true)
     }
   ]
   
   # Process emergency policy rules
   emergency_rules = [
     for rule in local.emergency_policy : {
-      name        = try(rule.name, "emergency-rule-${index(local.emergency_policy, rule) + 1}")
-      sources     = rule.source
-      destinations = rule.destination
-      action      = "ALLOW"
+      name          = try(rule.name, "emergency-rule-${index(local.emergency_policy, rule) + 1}")
+      sources       = rule.source
+      destinations  = rule.destination
+      action        = "ALLOW"
+      scope_enabled = try(rule.scope_enabled, true)
     }
   ]
 }
@@ -81,7 +85,8 @@ resource "nsxt_policy_security_policy" "emergency_policy" {
     for_each = local.emergency_rules
     content {
       display_name       = rule.value.name
-      scope = [var.groups.tenant_group_id]
+      # Conditionally set scope based on scope_enabled flag
+      scope              = rule.value.scope_enabled ? [var.groups.tenant_group_id] : []
       
       # Handle source groups with appropriate lookup based on format
       source_groups = flatten([
@@ -159,7 +164,8 @@ resource "nsxt_policy_security_policy" "environment_policy" {
     for_each = local.environment_rules
     content {
       display_name       = rule.value.name
-      scope = [var.groups.tenant_group_id]
+      # Conditionally set scope based on scope_enabled flag
+      scope              = rule.value.scope_enabled ? [var.groups.tenant_group_id] : []
       source_groups      = [var.groups.environment_groups[rule.value.source]]
       destination_groups = [var.groups.environment_groups[rule.value.destination]]
       action             = rule.value.action
@@ -185,7 +191,8 @@ resource "nsxt_policy_security_policy" "application_policy" {
     for_each = local.application_rules
     content {
       display_name       = rule.value.name
-      scope = [var.groups.tenant_group_id]
+      # Conditionally set scope based on scope_enabled flag
+      scope              = rule.value.scope_enabled ? [var.groups.tenant_group_id] : []
       
       # Handle source groups with appropriate lookup based on format
       source_groups = flatten([

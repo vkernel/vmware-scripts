@@ -6,15 +6,18 @@ wld09:
         - emg-wld09
       destination: 
         - any
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
   environment_policy:
     allowed_communications:
       - name: Allow prod environment to test environment
         source: env-wld09-prod
         destination: env-wld09-test
+        scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     blocked_communications:
       - name: Block test environment from prod environment
         source: env-wld09-test
         destination: env-wld09-prod
+        scope_enabled: true  # Set to false to disable tenant scope, defaults to true
   application_policy:
     - name: Allow jumphost to ten-wld09 on port 22
       source: ext-wld09-jumphosts
@@ -22,6 +25,7 @@ wld09:
         - ten-wld09
       services:
         - SSH
+      scope_enabled: false  # Set to false to disable tenant scope, defaults to true
     - name: Allow jumphost to web servers on port 443
       source: ext-wld09-jumphosts
       destination: 
@@ -33,6 +37,7 @@ wld09:
       ports:
         - 443
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Test ICMP between jumphost and web servers
       source: ext-wld09-jumphosts
       destination: 
@@ -44,6 +49,7 @@ wld09:
       ports:
         - 445
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow web servers to application servers on port 8443
       source: 
         - app-wld09-prod-3holapp-web
@@ -58,6 +64,7 @@ wld09:
       ports: 
         - 8443
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow application servers to database servers on port 3306
       source: 
         - app-wld09-prod-3holapp-application
@@ -72,9 +79,11 @@ wld09:
       ports:
         - 3306
       protocol: tcp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true
     - name: Allow wld09 servers to external DNS on port 53
       source: ten-wld09
       destination: ext-wld09-dns
       ports:
         - 53
-      protocol: udp 
+      protocol: udp
+      scope_enabled: true  # Set to false to disable tenant scope, defaults to true 
