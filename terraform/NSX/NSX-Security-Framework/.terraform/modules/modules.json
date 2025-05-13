@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"config","Source":"./config","Dir":"config"},{"Key":"groups","Source":"./modules/groups","Dir":"modules/groups"},{"Key":"policies","Source":"./modules/policies","Dir":"modules/policies"},{"Key":"services","Source":"./modules/services","Dir":"modules/services"},{"Key":"tags","Source":"./modules/tags","Dir":"modules/tags"}]}
